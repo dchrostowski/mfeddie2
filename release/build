@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -e # Exit on error
+
+npm_opts=${NPM_INSTALL_OPTS:-''}
+
+working_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+app_path=$(dirname $working_dir)
+
+$app_path/bin/link_node_binaries
+
+# Cleanup old modules
+rm -rf $app_path/node_modules
+
+npm install $npm_opts

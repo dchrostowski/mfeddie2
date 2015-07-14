@@ -1,0 +1,28 @@
+{
+  "name": "mfeddie",
+  "version": "1.0.0",
+  "description": "Headless browsing for crawlers",
+  "main": "mf_server.js",
+  "scripts": {
+    "test": "node mf_server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.sol/yellowbot/mfeddie"
+  },
+  "dependencies": {
+      "phantom" : "~0.7.2",
+      "config" : "~1.10.0"
+  },
+  "keywords": [
+    "headless",
+    "browser",
+    "phantom"
+  ],
+  "author": "Dan Chrostowski",
+  "license": "ISC",
+  "engines": {
+    "node": "0.10.21",
+    "npm": "2.1.11"
+  }
+}

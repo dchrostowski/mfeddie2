@@ -1,0 +1,16 @@
+{
+    "__comment": "Default",
+    "port": 8315,
+    "default_domain": {
+        "fqdn": "dcapprod1.bur.sol",
+        "ssl": false
+    },
+    
+    "timeout" : "2500",
+    "wait" : "800",
+    "max_instances" : "64",
+    "status_interval" : "5000",
+    "process_timeout_seconds" : "120",
+    "log_file" : "production.log"
+    
+}

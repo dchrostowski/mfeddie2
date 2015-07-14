@@ -1,0 +1,40 @@
+#!/bin/bash
+
+export PATH=/usr/local/bin:/usr/bin:/bin:$PATH
+
+working_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+app_path=$(dirname $working_dir)
+
+app_services=${1:-$app_path/services}
+local_services=${2:-/local/$USER/services}
+local_svscan=${3:-/local/$USER/svscan}
+
+mkdir -p $local_services $local_svscan
+
+# Clean up services that are removed from app sources
+for file in $(ls $local_svscan); do
+    [[ "$file" == "lock" ]] && continue # Skip lock files
+    if [ ! -d $app_services/$file ]; then
+        rm $local_svscan/$file
+        svc -dx $local_services/$file $local_services/$file/log
+    fi
+done
+
+chmod +t $app_services/* # Why?
+
+rsync -a --exclude supervise  --delete $app_services/ $local_services/
+
+if [ ! -e $local_svscan/app ]; then
+    ln -s $local_services/app/ $local_svscan/app
+fi
+
+# Start services
+svc -tu $local_svscan/*/.
+
+# rsync will leave unused dirs if they have a supervise/ dir
+# so we need to purge any left
+for dir in $(ls $local_services); do
+    if ! [ -d $app_services/$dir ]; then
+        rm -r $local_services/$dir
+    fi
+done

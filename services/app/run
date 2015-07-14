@@ -1,0 +1,42 @@
+#!/bin/bash
+
+exec </dev/null
+exec 2>&1
+
+find .nospin -mmin -1 -exec echo "*** RATE LIMITING RESTART ***" \; -exec sleep 10 \;
+touch .nospin
+
+# Default
+send_crashlog=false
+
+case "$USER" in
+    mfeddie_prod)
+        export NODE_ENV=production
+        send_crashlog=true
+        ;;
+    mfeddie_dev)
+        export NODE_ENV=development
+        send_crashlog=false
+        ;;
+    *qa*)
+        export NODE_ENV=production
+        ;;
+   *)
+        echo "unknown user $USER, setting NODE_ENV to default"
+        export NODE_ENV=default
+        ;;
+esac
+
+if [[ $send_crashlog == true ]]; then
+    echo "Emailing crashlog to fealerts@solfo.com"
+    DATE=`date`
+    HOSTNAME=`hostname`
+    echo "Crash log $USER $HOSTNAME $DATE" >/tmp/${USER}_crashlog.txt
+    tail -30 /local/$USER/logs/app.log >>/tmp/${USER}_crashlog.txt
+    cat -v /tmp/${USER}_crashlog.txt | mail -s "$USER $HOSTNAME restart $DATE" mfealerts@solfo.com
+fi
+
+echo -n "SERVICE_RESTART "; date
+pkill -f phantomjs -U $USER
+cd ~/mfeddie
+exec node mf_server.js
