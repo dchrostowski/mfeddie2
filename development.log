@@ -1,4 +1,12 @@
-[2015-07-14T02:05:08.417Z]: log init
-[2015-07-14T02:05:08.418Z]: max instances: 16
-[2015-07-14T02:18:53.290Z]: log init
-[2015-07-14T02:18:53.291Z]: max instances: 16
+[2015-07-14T06:20:52.098Z]: There are 2 instances running with these PIDs:
+[2015-07-14T06:20:52.098Z]: 32422, 32461, 
+[2015-07-14T06:20:57.101Z]: There are 1 instances running with these PIDs:
+[2015-07-14T06:20:57.101Z]: 32461, 
+[2015-07-14T06:21:02.103Z]: There are 1 instances running with these PIDs:
+[2015-07-14T06:21:02.104Z]: 32461, 
+[2015-07-14T06:21:07.110Z]: There are 1 instances running with these PIDs:
+[2015-07-14T06:21:07.110Z]: 32461, 
+[2015-07-14T06:21:12.116Z]: There are 1 instances running with these PIDs:
+[2015-07-14T06:21:12.116Z]: 32461, 
+[2015-07-14T06:21:17.121Z]: There are 1 instances running with these PIDs:
+[2015-07-14T06:21:17.121Z]: 32461, 

@@ -57,6 +57,9 @@ function parse_query_args(args, cb, pid) {
 
     if (typeof args.return_on_timeout === 'undefined') args['return_on_timeout'] = true
     else args['return_on_timeout'] = parseInt(args.return_on_timeout);
+    
+    if (typeof args.require_proxy === 'undefined') args['require_proxy'] = true
+    else args['require_proxy'] = parseInt(args.require_proxy);
 
     var allowed = [];
     var disallowed = [];
@@ -74,7 +77,7 @@ function parse_query_args(args, cb, pid) {
         }
 
         // A squid proxy, user agent, and url are required for a page visit.
-        if((!args.proxy || !args.user_agent || !args.url) && !pid) {
+        if(((!args.proxy && args.require_proxy) || !args.user_agent || !args.url) && !pid) {
             mf_log.log("Bad status reason: MISSING REQUIRED PARAMS");
             return cb(gen_response('Error', 'Missing required params'), json, null, 503);
         }

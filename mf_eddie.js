@@ -51,6 +51,7 @@ function MF_Eddie(args, cb) {
     this.allowed = args.allowed;
     this.disallowed = args.disallowed;
     this.return_on_timeout = args.return_on_timeout;
+    this.require_proxy = args.require_proxy;
 
     this.page_content_type = 'text/html';
     this.status_code = '';
@@ -59,8 +60,10 @@ function MF_Eddie(args, cb) {
     this.timedOut = false;
     this.current_action = 'init';
     this.url = null;
+    
+    var parameters_arg = (this.require_proxy) ? {paramaters: {proxy: args.proxy}} : false;
 
-    phantom.create({parameters: {proxy: args.proxy}}, function(ph) {
+    phantom.create(parameters_arg, function(ph) {
         this.set_phantom(ph, cb);
     }.bind(this));
 };
