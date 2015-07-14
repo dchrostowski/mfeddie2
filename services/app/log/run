@@ -1,4 +1,0 @@
-#!/bin/sh
-DAEMON=$(basename $(dirname $(pwd)))
-cd /local/$USER/logs
-exec cronolog %Y/%m/$DAEMON.log.%Y%m%d -l $DAEMON.log
