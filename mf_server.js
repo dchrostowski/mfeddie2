@@ -17,6 +17,7 @@ var mf_instances = new MF_Instances();
 var json = 'application/json';
 var MAX_INSTANCES = config.get('max_instances') || 8;
 mf_log.log('max instances: ' + MAX_INSTANCES);
+mf_log.log(config.get('port'));
 
 function gen_response (status, message) {
     return JSON.stringify({status: status, message: message});
@@ -123,6 +124,49 @@ function parse_query_args(args, cb, pid) {
         // otherwise, make a new browser instance.
         else mf_eddie = new MF_Eddie(args, mfcb);
     }
+    
+    else if (args.action == 'enter_text') {
+		var ft = args.force_text || false;
+        if(!pid || !args.selector || !args.text) {
+            mf_log.log("Bad status reason: MISSING REQUIRED PARAMS ON ENTER_TEXT");
+            return cb(gen_response('Error', 'Missing required params.'), json, null, 503);
+        }
+        var m = mf_instances.get_instance(pid);
+        if(!m) {
+            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
+        }
+        // click callback function
+        var etcb = function(err, warn, ok) {
+            if(err) return cb(gen_response('Error', err), json);
+            else if(warn) return cb(gen_response('Warning', warn), json);
+            else if(ok) return cb(gen_response('OK', ok), json);
+        };
+
+        var text_args = {
+            selector: args.selector,
+            callback: etcb,
+            force_text: ft,
+            text: args.text,
+            timeout: args.timeout
+        };
+        // Call click function of browser
+        m.enter_text(text_args);
+    }
+    // Will return content, not necessarily HTML code (e.g. JSON data may be returned)
+    else if (args.action == 'get_html') {
+        if(!pid) return cb(gen_response('Error', 'Missing phantom pid'), json);
+        var m = mf_instances.get_instance(pid);
+        if(!m) {
+            mf_log.log("Bad status reason: NO PHANTOM INSTANCE FOUND WITH PID " + pid + " - MAY HAVE TIMED OUT");
+            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
+        }
+        var gcb = function(err, html) {
+            if(err) return cb(gen_response("Error", err), json);
+            return cb(html, m.page_content_type, null, m.status_code);
+        };
+        return m.get_content(args.timeout, gcb);
+		
+	}
 
     else if (args.action == 'click') {
         var fc = args.force_click || false;

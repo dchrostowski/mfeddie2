@@ -202,26 +202,33 @@ MF_Eddie.prototype.enter_text = function(et_args) {
     var timeout = et_args.timeout || WAIT;
 
     if(!et_args.selector) {
-        return et_args.callback('Missing required arguments: click(selector)', false, false);
+        return et_args.callback('Missing required arguments: enter_text(selector)', false, false);
     }
     if(!this.page) {
         return et_args.callback('Error: no page loaded', false, false);
     }
 
-    var selector_type;
-
-    if(!et_args.force_selector_type) {
-        selector_type = get_selector_type(et_args.selector);
-    }
-    else {
-        selector_type = et_args.force_selector_type;
-    }
-
-    var eval_args = {s:et_args.selector, f: et_args.force_text, st: selector_type, t: et_args.text};
+    var eval_args = {s:et_args.selector, f: et_args.force_text, t: et_args.text};
 
     this.page.includeJs(config.get('jquery_url'), function() {
-		
-	});
+		this.page.evaluate(evaluateWithArgs(function(args) {
+			var element = $(args.s);
+			if(!element) {
+				var msg = "Element " + args.s + " not found.";
+				return [msg, false, false];
+			}
+			else if(!element.is(":visible")) {
+				var msg = "Element " + args.s + " appears to be hidden.  Use force_text=1 to override";
+				return [false, msg, false];
+			}
+			else {
+				element.val(args.t);
+			}
+			return [false, false, 'Found element ' + args.s + ' and entered text'];
+		}, eval_args), function(res) {
+			setTimeout(function() {return et_args.callback(res[0], res[1], res[2]);}, timeout);
+		});
+	}.bind(this));
 
 };
 
