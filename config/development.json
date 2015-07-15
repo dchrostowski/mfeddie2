@@ -1,6 +1,6 @@
 {
     "__comment": "Default",
-    "port": 8315,
+    "port": 8314,
     "default_domain": {
         "fqdn": "dcapdev2.bur.sol",
         "ssl": false
@@ -11,5 +11,6 @@
     "max_instances" : "16",
     "status_interval" : "5000",
     "process_timeout_seconds" : "120",
-    "log_file" : "development.log"
+    "log_file" : "development.log",
+    "jquery_url" : "http://code.jquery.com/jquery-1.11.3.min.js"
 }

@@ -70,6 +70,11 @@ function parse_query_args(args, cb, pid) {
     if(args.disallowed) disallowed = JSON.parse(args.disallowed);
     args['allowed'] = allowed;
     args['disallowed'] = disallowed;
+    
+    if(args.action == 'test_jquery') {
+		var m = mf_instances.get_instance(pid);
+		m.test_jquery();
+	}
 
     if(args.action == 'visit') {
         var set_cookies = false;

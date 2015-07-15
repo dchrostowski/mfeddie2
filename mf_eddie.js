@@ -63,8 +63,6 @@ function MF_Eddie(args, cb) {
     this.load_time = 0;
     
     var parameters_arg = (this.require_proxy) ? {paramaters: {proxy: args.proxy}} : false;
-    mf_log.log("PARAMETERS ARG: ");
-    mf_log.log(JSON.stringify(parameters_arg));
     if(args.require_proxy) {
 		phantom.create({parameters: {proxy: args.proxy}}, function(ph) {
 			this.set_phantom(ph, cb);
@@ -186,6 +184,45 @@ MF_Eddie.prototype.visit = function(url, cb, rcf) {
         }.bind(this));
 
     }.bind(this));
+};
+
+MF_Eddie.prototype.test_jquery = function() {
+	this.page.includeJs(config.get('jquery_url'), function() {
+		return this.page.evaluate(function() {
+			$('input#fname').val('Toshi');
+			
+			$('#b').click();
+		})
+	}.bind(this));
+}
+
+MF_Eddie.prototype.enter_text = function(et_args) {
+    this.current_action = 'enter_text';
+
+    var timeout = et_args.timeout || WAIT;
+
+    if(!et_args.selector) {
+        return et_args.callback('Missing required arguments: click(selector)', false, false);
+    }
+    if(!this.page) {
+        return et_args.callback('Error: no page loaded', false, false);
+    }
+
+    var selector_type;
+
+    if(!et_args.force_selector_type) {
+        selector_type = get_selector_type(et_args.selector);
+    }
+    else {
+        selector_type = et_args.force_selector_type;
+    }
+
+    var eval_args = {s:et_args.selector, f: et_args.force_text, st: selector_type, t: et_args.text};
+
+    this.page.includeJs(config.get('jquery_url'), function() {
+		
+	});
+
 };
 
 function get_selector_type(selector) {
