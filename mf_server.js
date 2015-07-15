@@ -21,6 +21,9 @@ mf_log.log('max instances: ' + MAX_INSTANCES);
 function gen_response (status, message) {
     return JSON.stringify({status: status, message: message});
 }
+function visit_response (status, message, time) {
+    return JSON.stringify({status: status, message: message, time: time});
+}
 
 function parseCookies (request) {
     var list = {},
@@ -91,7 +94,7 @@ function parse_query_args(args, cb, pid) {
                 if(v_warn && !args.get_content) {
                     return cb(gen_response('OK', v_warn), json, set_cookies, null, mf_eddie.status_code);
                 }
-                return (args.get_content) ? cb(ok, mf_eddie.page_content_type, set_cookies, mf_eddie.status_code) : cb(gen_response('OK', 'Visted page.'), json, set_cookies, mf_eddie.status_code);
+                return (args.get_content) ? cb(ok, mf_eddie.page_content_type, set_cookies, mf_eddie.status_code) : cb(visit_response('OK', 'Visited page', mf_eddie.load_time), json, set_cookies, mf_eddie.status_code);
         };
         // Instance creation callback.
         var mfcb = function(err) {

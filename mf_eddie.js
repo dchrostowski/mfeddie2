@@ -60,12 +60,21 @@ function MF_Eddie(args, cb) {
     this.timedOut = false;
     this.current_action = 'init';
     this.url = null;
+    this.load_time = 0;
     
     var parameters_arg = (this.require_proxy) ? {paramaters: {proxy: args.proxy}} : false;
-
-    phantom.create(parameters_arg, function(ph) {
-        this.set_phantom(ph, cb);
-    }.bind(this));
+    mf_log.log("PARAMETERS ARG: ");
+    mf_log.log(JSON.stringify(parameters_arg));
+    if(args.require_proxy) {
+		phantom.create({parameters: {proxy: args.proxy}}, function(ph) {
+			this.set_phantom(ph, cb);
+		}.bind(this));
+	}
+	else {
+		phantom.create(function(ph) {
+			this.set_phantom(ph, cb);
+		}.bind(this));
+	}
 };
 
 function base_url(url) {
@@ -163,6 +172,7 @@ MF_Eddie.prototype.visit = function(url, cb, rcf) {
                 this.status_code = resp.status;
             }
         }.bind(this));
+        var t = Date.now();
 
 
         page.open(url, function(status) {
@@ -170,6 +180,8 @@ MF_Eddie.prototype.visit = function(url, cb, rcf) {
             if(err)
                 return cb(err);
             var pcb = function(e, w, c){cb(e, w, c);};
+            t = Date.now() - t;
+            this.load_time = t;
             return this.set_page(page, pcb, rcf);
         }.bind(this));
 
