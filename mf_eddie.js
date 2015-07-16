@@ -196,6 +196,63 @@ MF_Eddie.prototype.test_jquery = function() {
 	}.bind(this));
 }
 
+MF_Eddie.prototype.download_image = function(et_args) {
+    this.current_action = 'download_image';
+
+    var timeout = et_args.timeout || WAIT;
+
+    if(!et_args.selector) {
+        return et_args.callback('Missing required arguments: enter_text(selector)', false, false);
+    }
+    if(!this.page) {
+        return et_args.callback('Error: no page loaded', false, false);
+    }
+
+    var eval_args = {s:et_args.selector, page: this.page};
+
+    this.page.includeJs(config.get('jquery_url'), function() {
+		this.page.evaluate(evaluateWithArgs(function(args) {
+			
+			function getImgDimensions($i) {
+                return {
+                    top : $i.offset().top,
+                    left : $i.offset().left,
+                    width : $i.width(),
+                    height : $i.height()
+                }
+            }
+			var element = $(args.s);
+			if(!element) {
+				var msg = "Element " + args.s + " not found.";
+				return [msg, false, false];
+			}
+			else if(!element.is(":visible")) {
+				var msg = "Element " + args.s + " appears to be hidden.  Use force to override";
+				return [false, msg, false];
+			}
+			else {
+				var img = getImgDimensions(element);
+				return [false, false, img];
+				
+			}
+			return [false, false, 'Found element ' + args.s + ' and entered text'];
+		}, eval_args), function(res) {
+			setTimeout(function() {
+				var image;
+				if(!res[0] && !res[1]) {
+					image = res[2];
+					res[2] = "OK, downloaded image" 
+				}
+				this.page.set('clipRect', image);
+				this.page.render('/home/dan/PHANTOMRENDER.jpeg');
+				return et_args.callback(res[0], res[1], res[2]);
+			}.bind(this), timeout);
+		}.bind(this));
+	}.bind(this));
+
+};
+
+
 MF_Eddie.prototype.enter_text = function(et_args) {
     this.current_action = 'enter_text';
 

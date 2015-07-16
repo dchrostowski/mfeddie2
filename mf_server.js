@@ -125,6 +125,32 @@ function parse_query_args(args, cb, pid) {
         else mf_eddie = new MF_Eddie(args, mfcb);
     }
     
+    else if (args.action == 'download_image') {
+		if(!pid || !args.selector) {
+            mf_log.log("Bad status reason: MISSING REQUIRED PARAMS ON ENTER_TEXT");
+            return cb(gen_response('Error', 'Missing required params.'), json, null, 503);
+        }
+        
+        var m = mf_instances.get_instance(pid);
+        if(!m) {
+            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
+        }
+        // click callback function
+        var etcb = function(err, warn, ok) {
+            if(err) return cb(gen_response('Error', err), json);
+            else if(warn) return cb(gen_response('Warning', warn), json);
+            else if(ok) return cb(gen_response('OK', ok), json);
+        };
+
+        var text_args = {
+            selector: args.selector,
+            callback: etcb,
+            timeout: args.timeout
+        };
+        // Call click function of browser
+        m.download_image(text_args);
+	}
+    
     else if (args.action == 'enter_text') {
 		var ft = args.force_text || false;
         if(!pid || !args.selector || !args.text) {
