@@ -42,8 +42,8 @@ MF_Eddie.prototype.set_page = function(p, cb, rcf) {
     return cb(false, warn, 1);
 };
 
-function MF_Eddie(args, cb) {
-    this.proxy = args.proxy;
+MF_Eddie.prototype.update_args = function(args, cb) {
+	this.proxy = args.proxy;
     this.user_agent = args.user_agent;
     this.load_media = args.load_media;
     this.load_external = args.load_external;
@@ -61,6 +61,13 @@ function MF_Eddie(args, cb) {
     this.current_action = 'init';
     this.url = null;
     this.load_time = 0;
+    
+    if(typeof cb === 'function') return cb();
+    return;
+}
+
+function MF_Eddie(args, cb) {
+    this.update_args(args);
     
     var parameters_arg = (this.require_proxy) ? {paramaters: {proxy: args.proxy}} : false;
     if(args.require_proxy) {
@@ -187,7 +194,7 @@ MF_Eddie.prototype.visit = function(url, cb, rcf) {
 };
 
 MF_Eddie.prototype.test_jquery = function() {
-	this.page.includeJs(config.get('jquery_url'), function() {
+	this.page.injectJs(config.get('jquery_lib'), function() {
 		return this.page.evaluate(function() {
 			$('input#fname').val('Toshi');
 			
@@ -198,7 +205,7 @@ MF_Eddie.prototype.test_jquery = function() {
 
 MF_Eddie.prototype.download_image = function(dl_args) {
 	mf_log.log("reached download_image function");
-    this.current_action = 'download_file';
+    this.current_action = 'download_image';
 
     var timeout = dl_args.timeout || WAIT;
 
@@ -211,7 +218,7 @@ MF_Eddie.prototype.download_image = function(dl_args) {
 
     var eval_args = {s:dl_args.selector};
 
-    this.page.includeJs(config.get('jquery_url'), function() {
+    this.page.injectJs(config.get('jquery_lib'), function() {
 		this.page.evaluate(evaluateWithArgs(function(args) {
 			function getImgDimensions($i) {
                 return {
@@ -253,9 +260,54 @@ MF_Eddie.prototype.download_image = function(dl_args) {
 
 };
 
+MF_Eddie.prototype.follow_link = function(fl_args) {
+    this.current_action = 'follow_link';
+    
+
+    var timeout = fl_args.timeout || WAIT;
+
+    if(!fl_args.selector) {
+        return fl_args.callback('Missing required arguments: enter_text(selector)', false, false);
+    }
+    if(!this.page) {
+        return fl_args.callback('Error: no page loaded', false, false);
+    }
+
+    var eval_args = {s:fl_args.selector};
+
+    this.page.injectJs(config.get('jquery_lib'), function() {
+		this.page.evaluate(evaluateWithArgs(function(args) {
+			var element = $(args.s);
+			if(!element) {
+				var msg = "Element " + args.s + " not found.";
+				return [msg, false, false];
+			}
+			else if(!element.is(":visible")) {
+				var msg = "Element " + args.s + " appears to be hidden.  Use force_follow=1 to override";
+				return [false, msg, false];
+			}
+			
+			else if(!element[0].href) {
+				var msg = "Element " + args.s + " does not appear to be a link.  Could not find href attribute";
+				return [msg, false, false];
+			}
+			else {
+				location.href = element[0].href;
+			}
+			return [false, false, 'Found element ' + args.s + ' and followed link to ' + element[0].href];
+		}, eval_args), function(res) {
+			setTimeout(function() {return fl_args.callback(res[0], res[1], res[2]);}, timeout);
+		});
+	}.bind(this));
+
+};
+
 
 MF_Eddie.prototype.enter_text = function(et_args) {
     this.current_action = 'enter_text';
+    mf_log.log('mf_eddie.js: in enter_text fn');
+    mf_log.log("libpath?");
+    mf_log.log(this.ph.libraryPath);
 
     var timeout = et_args.timeout || WAIT;
 
@@ -268,7 +320,7 @@ MF_Eddie.prototype.enter_text = function(et_args) {
 
     var eval_args = {s:et_args.selector, f: et_args.force_text, t: et_args.text};
 
-    this.page.includeJs(config.get('jquery_url'), function() {
+    this.page.injectJs(config.get('jquery_lib'), function() {
 		this.page.evaluate(evaluateWithArgs(function(args) {
 			var element = $(args.s);
 			if(!element) {
@@ -307,48 +359,39 @@ MF_Eddie.prototype.click = function(c_args) {
         return c_args.callback('Error: no page loaded', false, false);
     }
 
-    var selector_type;
+    var eval_args = {s:c_args.selector, f: c_args.force_click};
+    
+	this.page.injectJs(config.get('jquery_lib'), function() {
+		this.page.evaluate(evaluateWithArgs(function(args) {
+			
+			function eventFire(el, etype){
+			  if (el.fireEvent) {
+				el.fireEvent('on' + etype);
+			  } else {
+				var evObj = document.createEvent('Events');
+				evObj.initEvent(etype, true, false);
+				el.dispatchEvent(evObj);
+			  }
+			}
+			
+			var element = $(args.s);
+			if(!element) {
+				var msg = "Element " + args.s + " not found.";
+				return [msg, false, false];
+			}
+			else if(!element.is(":visible")) {
+				var msg = "Element " + args.s + " appears to be hidden.  Use force_text=1 to override";
+				return [false, msg, false];
+			}
+			else {
+				eventFire(element[0], 'click');
+			}
 
-    if(!c_args.force_selector_type) {
-        selector_type = get_selector_type(c_args.selector);
-    }
-    else {
-        selector_type = c_args.force_selector_type;
-    }
-
-    var eval_args = {s:c_args.selector, f: c_args.force_click, t: selector_type};
-
-    this.page.evaluate(evaluateWithArgs(function(args) {
-        var element;
-
-        if(args.t == 'css') element = document.querySelector(args.s);
-        //XPATH is not reliable
-        else if (args.t == 'xpath') {
-            var elements = document.evaluate(args.s, document, null, XPathResult.ANY_TYPE, null);
-            element = elements.iterateNext();
-        }
-        else {
-            return ['Selector type ' + args.t + ' not supported', false, false];
-        }
-
-        if(!element) {
-            var msg = 'element ' + args.s + ' not found.';
-            if(args.t == 'xpath')
-                msg = msg + '  Try using a CSS selector instead.';
-            return [msg, false, false];
-        }
-        else if(element.offsetWidth <= 0 && element.offsetHeight <=0 && !args.f) {
-            var msg = "Element " + args.s + " appears to be hidden.  It may be a honeypot. Use force_click=1 if you know what you're doing";
-            return [false, msg, false];
-        }
-        else {
-            element.click();
-        }
-
-        return [false, false, 'Found and clicked element ' + args.s];
-    }, eval_args), function(res) {
-            setTimeout(function() {return c_args.callback(res[0], res[1], res[2]);}, timeout);
-    });
+			return [false, false, 'Found and clicked element ' + args.s];
+		}, eval_args), function(res) {
+				setTimeout(function() {return c_args.callback(res[0], res[1], res[2]);}, timeout);
+		});
+	}.bind(this));
 
 };
 

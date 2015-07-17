@@ -50,7 +50,7 @@ function decide_fate(keep_alive, pid) {
 
 // http server sends arguments here and determines what to do with them.
 function parse_query_args(args, cb, pid) {
-
+	mf_log.log("top of parse_query_args, check action: " + args.action);
     if(pid) mf_instances.update_timeout(pid)
     else args['keep_alive'] = parseInt(args.keep_alive) || false;
 
@@ -115,7 +115,9 @@ function parse_query_args(args, cb, pid) {
         if(pid) {
             mf_eddie = mf_instances.get_instance(pid);
             if(mf_eddie) {
-                return mf_eddie.visit(args.url, vcb, args.get_content);
+				mf_eddie.update_args(args, function() {
+					return mf_eddie.visit(args.url, vcb, args.get_content);
+				});
             }
             else {
                 mf_log.log("Bad status reason: UNABLE TO RETRIEVE INSTANCE WITH PID " + pid);
@@ -125,6 +127,7 @@ function parse_query_args(args, cb, pid) {
         // otherwise, make a new browser instance.
         else mf_eddie = new MF_Eddie(args, mfcb);
     }
+    
     
     else if (args.action == 'download_image') {
 		if(!pid || !args.selector) {
@@ -152,8 +155,10 @@ function parse_query_args(args, cb, pid) {
         // Call click function of browser
         m.download_image(dl_args);
 	}
+	
     
     else if (args.action == 'enter_text') {
+		mf_log.log('enter text conditional');
 		var ft = args.force_text || false;
         if(!pid || !args.selector || !args.text) {
             mf_log.log("Bad status reason: MISSING REQUIRED PARAMS ON ENTER_TEXT");
@@ -180,6 +185,35 @@ function parse_query_args(args, cb, pid) {
         // Call click function of browser
         m.enter_text(text_args);
     }
+    
+     else if (args.action == 'follow_link') {
+		 mf_log.log("in follow_link condition");
+		var ff = args.force_follow || false;
+        if(!pid || !args.selector) {
+            mf_log.log("Bad status reason: MISSING REQUIRED PARAMS ON ENTER_TEXT");
+            return cb(gen_response('Error', 'Missing required params.'), json, null, 503);
+        }
+        var m = mf_instances.get_instance(pid);
+        if(!m) {
+            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
+        }
+        // click callback function
+        var etcb = function(err, warn, ok) {
+            if(err) return cb(gen_response('Error', err), json);
+            else if(warn) return cb(gen_response('Warning', warn), json);
+            else if(ok) return cb(gen_response('OK', ok), json);
+        };
+
+        var follow_link_args = {
+            selector: args.selector,
+            callback: etcb,
+            force_follow: ff,
+            timeout: args.timeout
+        };
+        // Call click function of browser
+        m.follow_link(follow_link_args);
+    }
+    
     // Will return content, not necessarily HTML code (e.g. JSON data may be returned)
     else if (args.action == 'get_html') {
         if(!pid) return cb(gen_response('Error', 'Missing phantom pid'), json);
@@ -322,8 +356,9 @@ var server = http.createServer(function(req, res) {
     // Proxy mode: Checks to see if we are getting our browser options/commands from request headers.
     else if(!isEmpty(req.headers) && req.headers['mf-action']) {
         req_args = get_args(req.headers);
-        req_args['url'] = req.url;
     }
+    
+    req_args['url'] = req_args.url || req.url;
 
     if((req_args.action == 'click' || req_args.action == 'back') && typeof req_args.keep_alive == 'undefined') {
         req_args['keep_alive'] = 1;
