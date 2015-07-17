@@ -12,5 +12,6 @@
     "status_interval" : "5000",
     "process_timeout_seconds" : "120",
     "log_file" : "development.log",
-    "jquery_url" : "http://code.jquery.com/jquery-1.11.3.min.js"
+    "jquery_url" : "http://code.jquery.com/jquery-1.11.3.min.js",
+    "dl_file_loc" : "./downloads/downloaded_file"
 }

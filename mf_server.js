@@ -58,6 +58,7 @@ function parse_query_args(args, cb, pid) {
     args['load_external'] = parseInt(args.load_external) || false;
     args['load_media'] = parseInt(args.load_media) || false;
     args['get_content'] = parseInt(args.get_content) || false;
+    args['dl_file_loc'] = args.dl_file_loc || config.get('dl_file_loc');
 
     if (typeof args.return_on_timeout === 'undefined') args['return_on_timeout'] = true
     else args['return_on_timeout'] = parseInt(args.return_on_timeout);
@@ -142,13 +143,14 @@ function parse_query_args(args, cb, pid) {
             else if(ok) return cb(gen_response('OK', ok), json);
         };
 
-        var text_args = {
+        var dl_args = {
             selector: args.selector,
+            dl_file_loc: args.dl_file_loc,
             callback: etcb,
             timeout: args.timeout
         };
         // Call click function of browser
-        m.download_image(text_args);
+        m.download_image(dl_args);
 	}
     
     else if (args.action == 'enter_text') {

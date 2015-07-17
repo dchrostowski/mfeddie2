@@ -196,23 +196,23 @@ MF_Eddie.prototype.test_jquery = function() {
 	}.bind(this));
 }
 
-MF_Eddie.prototype.download_image = function(et_args) {
-    this.current_action = 'download_image';
+MF_Eddie.prototype.download_image = function(dl_args) {
+	mf_log.log("reached download_image function");
+    this.current_action = 'download_file';
 
-    var timeout = et_args.timeout || WAIT;
+    var timeout = dl_args.timeout || WAIT;
 
-    if(!et_args.selector) {
-        return et_args.callback('Missing required arguments: enter_text(selector)', false, false);
+    if(!dl_args.selector) {
+        return dl_args.callback('Missing required arguments: enter_text(selector)', false, false);
     }
     if(!this.page) {
-        return et_args.callback('Error: no page loaded', false, false);
+        return dl_args.callback('Error: no page loaded', false, false);
     }
 
-    var eval_args = {s:et_args.selector, page: this.page};
+    var eval_args = {s:dl_args.selector};
 
     this.page.includeJs(config.get('jquery_url'), function() {
 		this.page.evaluate(evaluateWithArgs(function(args) {
-			
 			function getImgDimensions($i) {
                 return {
                     top : $i.offset().top,
@@ -230,12 +230,13 @@ MF_Eddie.prototype.download_image = function(et_args) {
 				var msg = "Element " + args.s + " appears to be hidden.  Use force to override";
 				return [false, msg, false];
 			}
-			else {
-				var img = getImgDimensions(element);
+			
+			var img = getImgDimensions(element);
+			if(img) {
 				return [false, false, img];
-				
 			}
-			return [false, false, 'Found element ' + args.s + ' and entered text'];
+			return ["Unknown error while downloading.", false, false];
+			
 		}, eval_args), function(res) {
 			setTimeout(function() {
 				var image;
@@ -244,8 +245,8 @@ MF_Eddie.prototype.download_image = function(et_args) {
 					res[2] = "OK, downloaded image" 
 				}
 				this.page.set('clipRect', image);
-				this.page.render('/home/dan/PHANTOMRENDER.jpeg');
-				return et_args.callback(res[0], res[1], res[2]);
+				this.page.render(dl_args.dl_file_loc);
+				return dl_args.callback(res[0], res[1], res[2]);
 			}.bind(this), timeout);
 		}.bind(this));
 	}.bind(this));
