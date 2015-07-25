@@ -17,6 +17,7 @@ var mf_instances = new MF_Instances();
 var json = 'application/json';
 var MAX_INSTANCES = config.get('max_instances') || 8;
 mf_log.log('max instances: ' + MAX_INSTANCES);
+mf_log.log(config.get('port'));
 
 function gen_response (status, message) {
     return JSON.stringify({status: status, message: message});
@@ -49,7 +50,7 @@ function decide_fate(keep_alive, pid) {
 
 // http server sends arguments here and determines what to do with them.
 function parse_query_args(args, cb, pid) {
-
+	mf_log.log("top of parse_query_args, check action: " + args.action);
     if(pid) mf_instances.update_timeout(pid)
     else args['keep_alive'] = parseInt(args.keep_alive) || false;
 
@@ -57,6 +58,7 @@ function parse_query_args(args, cb, pid) {
     args['load_external'] = parseInt(args.load_external) || false;
     args['load_media'] = parseInt(args.load_media) || false;
     args['get_content'] = parseInt(args.get_content) || false;
+    args['dl_file_loc'] = args.dl_file_loc || config.get('dl_file_loc');
 
     if (typeof args.return_on_timeout === 'undefined') args['return_on_timeout'] = true
     else args['return_on_timeout'] = parseInt(args.return_on_timeout);
@@ -70,6 +72,11 @@ function parse_query_args(args, cb, pid) {
     if(args.disallowed) disallowed = JSON.parse(args.disallowed);
     args['allowed'] = allowed;
     args['disallowed'] = disallowed;
+    
+    if(args.action == 'test_jquery') {
+		var m = mf_instances.get_instance(pid);
+		m.test_jquery();
+	}
 
     if(args.action == 'visit') {
         var set_cookies = false;
@@ -108,7 +115,9 @@ function parse_query_args(args, cb, pid) {
         if(pid) {
             mf_eddie = mf_instances.get_instance(pid);
             if(mf_eddie) {
-                return mf_eddie.visit(args.url, vcb, args.get_content);
+				mf_eddie.update_args(args, function() {
+					return mf_eddie.visit(args.url, vcb, args.get_content);
+				});
             }
             else {
                 mf_log.log("Bad status reason: UNABLE TO RETRIEVE INSTANCE WITH PID " + pid);
@@ -118,6 +127,108 @@ function parse_query_args(args, cb, pid) {
         // otherwise, make a new browser instance.
         else mf_eddie = new MF_Eddie(args, mfcb);
     }
+    
+    
+    else if (args.action == 'download_image') {
+		if(!pid || !args.selector) {
+            mf_log.log("Bad status reason: MISSING REQUIRED PARAMS ON ENTER_TEXT");
+            return cb(gen_response('Error', 'Missing required params.'), json, null, 503);
+        }
+        
+        var m = mf_instances.get_instance(pid);
+        if(!m) {
+            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
+        }
+        // click callback function
+        var etcb = function(err, warn, ok) {
+            if(err) return cb(gen_response('Error', err), json);
+            else if(warn) return cb(gen_response('Warning', warn), json);
+            else if(ok) return cb(gen_response('OK', ok), json);
+        };
+
+        var dl_args = {
+            selector: args.selector,
+            dl_file_loc: args.dl_file_loc,
+            callback: etcb,
+            timeout: args.timeout
+        };
+        // Call click function of browser
+        m.download_image(dl_args);
+	}
+	
+    
+    else if (args.action == 'enter_text') {
+		mf_log.log('enter text conditional');
+		var ft = args.force_text || false;
+        if(!pid || !args.selector || !args.text) {
+            mf_log.log("Bad status reason: MISSING REQUIRED PARAMS ON ENTER_TEXT");
+            return cb(gen_response('Error', 'Missing required params.'), json, null, 503);
+        }
+        var m = mf_instances.get_instance(pid);
+        if(!m) {
+            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
+        }
+        // click callback function
+        var etcb = function(err, warn, ok) {
+            if(err) return cb(gen_response('Error', err), json);
+            else if(warn) return cb(gen_response('Warning', warn), json);
+            else if(ok) return cb(gen_response('OK', ok), json);
+        };
+
+        var text_args = {
+            selector: args.selector,
+            callback: etcb,
+            force_text: ft,
+            text: args.text,
+            timeout: args.timeout
+        };
+        // Call click function of browser
+        m.enter_text(text_args);
+    }
+    
+     else if (args.action == 'follow_link') {
+		 mf_log.log("in follow_link condition");
+		var ff = args.force_follow || false;
+        if(!pid || !args.selector) {
+            mf_log.log("Bad status reason: MISSING REQUIRED PARAMS ON ENTER_TEXT");
+            return cb(gen_response('Error', 'Missing required params.'), json, null, 503);
+        }
+        var m = mf_instances.get_instance(pid);
+        if(!m) {
+            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
+        }
+        // click callback function
+        var etcb = function(err, warn, ok) {
+            if(err) return cb(gen_response('Error', err), json);
+            else if(warn) return cb(gen_response('Warning', warn), json);
+            else if(ok) return cb(gen_response('OK', ok), json);
+        };
+
+        var follow_link_args = {
+            selector: args.selector,
+            callback: etcb,
+            force_follow: ff,
+            timeout: args.timeout
+        };
+        // Call click function of browser
+        m.follow_link(follow_link_args);
+    }
+    
+    // Will return content, not necessarily HTML code (e.g. JSON data may be returned)
+    else if (args.action == 'get_html') {
+        if(!pid) return cb(gen_response('Error', 'Missing phantom pid'), json);
+        var m = mf_instances.get_instance(pid);
+        if(!m) {
+            mf_log.log("Bad status reason: NO PHANTOM INSTANCE FOUND WITH PID " + pid + " - MAY HAVE TIMED OUT");
+            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
+        }
+        var gcb = function(err, html) {
+            if(err) return cb(gen_response("Error", err), json);
+            return cb(html, m.page_content_type, null, m.status_code);
+        };
+        return m.get_content(args.timeout, gcb);
+		
+	}
 
     else if (args.action == 'click') {
         var fc = args.force_click || false;
@@ -245,8 +356,9 @@ var server = http.createServer(function(req, res) {
     // Proxy mode: Checks to see if we are getting our browser options/commands from request headers.
     else if(!isEmpty(req.headers) && req.headers['mf-action']) {
         req_args = get_args(req.headers);
-        req_args['url'] = req.url;
     }
+    
+    req_args['url'] = req_args.url || req.url;
 
     if((req_args.action == 'click' || req_args.action == 'back') && typeof req_args.keep_alive == 'undefined') {
         req_args['keep_alive'] = 1;
