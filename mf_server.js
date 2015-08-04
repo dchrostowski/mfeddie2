@@ -37,270 +37,169 @@ function parseCookies (request) {
     return list;
 }
 
-function decide_fate(keep_alive, pid) {
-    if(!keep_alive) {
-        mf_log.log('keep_alive = 0, deleting instance');
-       return mf_instances.delete_instance(pid, function(msg) {
-            return msg;
-        });
+function decide_fate(mfeddie, cb) {
+	var keep_alive = mfeddie.req_args.keep_alive
+	var fatal_error = mfeddie.fatal_error;
+	var del_cb = function(err, ok) {
+		return cb(err, false, ok);
+	}
+    if(!keep_alive || fatal_error) {
+		var pid = mfeddie.ph.process.pid;
+		if(fatal_error) mf_log.log('A fatal error occurred: ' + fatal_error + '.  Killing phantom process ' + pid);
+		if(!keep_alive && !fatal_error) mf_log.log('mf_keep_alive = 0, killing phantom process ' + pid);
+		return mf_instances.delete_instance(pid, cb);
+	}
+	return cb(false, true);
+}
+
+function delete_pid_cookie() {
+	return [['Set-Cookie', 'pid=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT']];
+}
+
+function validate_type (param_name, param_val, cb) {
+	var type_reqs = config.get('param_type_reqs');
+	var expected = type_reqs[param_name];
+	var casted;
+	var err_prefix = param_name + ' expects type ' + expected + '; ';
+	var err = false;
+	switch(expected) {
+		case 'string':
+			if(typeof param_val !== expected) {
+				err = err_prefix + "type received: " + typeof param_val;
+			}
+			casted = param_val + '';
+		break;
+		case 'int':
+			if(isNaN(param_val)) {
+				err = err_prefix +  param_val + ' is not a number';
+			}
+			else if(param_val != parseInt(param_val, 10)) {
+				err = err_prefix + param_val + ' is not an integer'; 
+			}
+			else {
+				casted = parseInt(param_val);
+			}
+		break;
+		case 'json':
+			try {
+				casted = JSON.parse(param_val);
+			}
+			catch(parse_err) {
+				err = err_prefix + 'a problem ocurred while parsing ';
+				err = err + param_value+': ' + parse_err;
+			}
+		break;
+	}
+	
+	return cb(err, casted);
+	
+}
+
+function validate_actions_and_parameters(request_args, cb) {
+    var valid_actions = config.get('actions');
+    var action = request_args.action;
+    // 1. Check that the provided action is a valid action
+    if(typeof action === 'undefined') return cb("No action defined.  Set mf_action parameter or header.");
+    
+    var valid_action = false;
+    for(var i in valid_actions) {
+        if(valid_actions[i] === action) {
+            valid_action = true;
+            break;
+        }
     }
-    else
-        return false;
+    if (!valid_action) return cb("Invalid action: '" + action + "'");
+    var validated = {
+        "action" : action,
+    };
+    // 2. Check that all required arguments are present.
+    var action_required = config.get('action_required');
+    var required_params = action_required[validated.action];
+    for(var i in required_params) {
+        var param_name = required_params[i];
+        var param_val = request_args[param_name];
+        if(typeof param_val === 'undefined') {
+            return cb("Missing required param '" + param_name + "' for action '" + action);
+        }
+        else {
+			validated[param_name] = param_val;
+        }
+    }
+    // 3. Add in optional params
+    var action_optional_defaults = config.get('action_optional_defaults');
+    var optional_defaults = action_optional_defaults[validated.action];
+    for (var param_name in optional_defaults) {
+        var param_val = request_args[param_name];
+        if(typeof param_val !== 'undefined') {
+			validated[param_name] = param_val;
+        }
+        else {
+			validated[param_name] = optional_defaults[param_name];
+		}
+    }
+    
+    //4. Cast all parameters to the correct type e.g. (int, string, json object) and catch any type mismatches.
+    var error = false;
+    for(var param_name in validated) {
+		var param_value = validated[param_name];
+		validate_type(param_name, param_value, function(t_err, valid_param) {
+			error = t_err;
+			validated[param_name] = valid_param;
+		});
+		if(error) break;
+	}
+	
+	return cb(error, validated);
 }
 
 // http server sends arguments here and determines what to do with them.
-function parse_query_args(args, cb, pid) {
-	mf_log.log("top of parse_query_args, check action: " + args.action);
-    if(pid) mf_instances.update_timeout(pid)
-    else args['keep_alive'] = parseInt(args.keep_alive) || false;
+function parse_query_args(args, cb) {
+    var validated_args;
+    var mfeddie;
+    var action_callback = function (err, warn, ok) {
+		return decide_fate(mfeddie, function(kill_err, alive, dead) {
+			var status_code, content_type, content, status, cookie, mf_resp;
+			if(alive) cookie = mfeddie.cookie();
+			if(dead) cookie = delete_pid_cookie();
+			status_code = mfeddie.status_code;
+			content_type = mfeddie.mf_content_type || mfeddie.content_type
+			if(mfeddie.mf_content_type && content_type === 'application/json') {
+				var message;
+				if(err) {status = 'Error'; message = err;}
+				if(warn) {status = 'Warning'; message = warn;}
+				if(ok) {status = 'OK'; message = ok;}
+				content = JSON.stringify({status: status, message: message});
+			}
+			else {
+				content = ok;
+			}
+			
+			return cb(content, content_type, cookie, status_code);
+		});
 
-    args['timeout'] = parseInt(args.timeout) || false;
-    args['load_external'] = parseInt(args.load_external) || false;
-    args['load_media'] = parseInt(args.load_media) || false;
-    args['get_content'] = parseInt(args.get_content) || false;
-    args['dl_file_loc'] = args.dl_file_loc || config.get('dl_file_loc');
+    };
+    var instance_callback = function(err, mf) {
+        mfeddie = mf;
+        if(err) return cb(err, json, null, 400);
+        delete validated_args['proxy'];
+        delete validated_args['user_agent'];
+        var fn = validated_args.action;
+        mfeddie[fn](validated_args, action_callback);
+    };
 
-    if (typeof args.return_on_timeout === 'undefined') args['return_on_timeout'] = true
-    else args['return_on_timeout'] = parseInt(args.return_on_timeout);
-    
-    if (typeof args.require_proxy === 'undefined') args['require_proxy'] = true
-    else args['require_proxy'] = parseInt(args.require_proxy);
-
-    var allowed = [];
-    var disallowed = [];
-    if(args.allowed) allowed = JSON.parse(args.allowed);
-    if(args.disallowed) disallowed = JSON.parse(args.disallowed);
-    args['allowed'] = allowed;
-    args['disallowed'] = disallowed;
-    
-    if(args.action == 'test_jquery') {
-		var m = mf_instances.get_instance(pid);
-		m.test_jquery();
-	}
-
-    if(args.action == 'visit') {
-        var set_cookies = false;
-        // Respond with 503 if there are too many browsers open to take on any additional work.
-        if((mf_instances.get_instance_count() >= MAX_INSTANCES) && !pid) {
-            mf_log.log("Bad status reason: OVER MAX INSTANCES");
-            return cb('503 - Service Unavailable', 'text/html', null, 503);
-        }
-
-        // A squid proxy, user agent, and url are required for a page visit.
-        if(((!args.proxy && args.require_proxy) || !args.user_agent || !args.url) && !pid) {
-            mf_log.log("Bad status reason: MISSING REQUIRED PARAMS");
-            return cb(gen_response('Error', 'Missing required params'), json, null, 503);
-        }
-        //Visit callback function
-        var vcb = function(v_err, v_warn, ok) {
-                if(v_err) {
-                    mf_log.log("Error on visit: " + v_err);
-                    var del_cb = function() {cb(gen_response('Error', v_err), json, null, mf_eddie.status_code);};
-                    return mf_instances.delete_instance(mf_eddie.ph.process.pid, del_cb);
-                }
-                if(v_warn && !args.get_content) {
-                    return cb(gen_response('OK', v_warn), json, set_cookies, null, mf_eddie.status_code);
-                }
-                return (args.get_content) ? cb(ok, mf_eddie.page_content_type, set_cookies, mf_eddie.status_code) : cb(visit_response('OK', 'Visited page', mf_eddie.load_time), json, set_cookies, mf_eddie.status_code);
-        };
-        // Instance creation callback.
-        var mfcb = function(err) {
-            if(err) return cb(gen_response('Error', err), json);
-            set_cookies = mf_instances.push_instance(mf_eddie);
-            return mf_eddie.visit(args.url, vcb, args.get_content);
-        };
-        // browser instance
-        var mf_eddie;
-        // if there is already phantom process
-        if(pid) {
-            mf_eddie = mf_instances.get_instance(pid);
-            if(mf_eddie) {
-				mf_eddie.update_args(args, function() {
-					return mf_eddie.visit(args.url, vcb, args.get_content);
-				});
-            }
-            else {
-                mf_log.log("Bad status reason: UNABLE TO RETRIEVE INSTANCE WITH PID " + pid);
-                return cb(gen_response('Error', "Unable to retrieve instance with pid " + pid + ' - process may have timed out.'), json, null, 503);
-            }
-        }
-        // otherwise, make a new browser instance.
-        else mf_eddie = new MF_Eddie(args, mfcb);
-    }
-    
-    
-    else if (args.action == 'download_image') {
-		if(!pid || !args.selector) {
-            mf_log.log("Bad status reason: MISSING REQUIRED PARAMS ON ENTER_TEXT");
-            return cb(gen_response('Error', 'Missing required params.'), json, null, 503);
-        }
+    var validate_cb = function(err, v_args) {
+        validated_args = v_args;
         
-        var m = mf_instances.get_instance(pid);
-        if(!m) {
-            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
-        }
-        // click callback function
-        var etcb = function(err, warn, ok) {
-            if(err) return cb(gen_response('Error', err), json);
-            else if(warn) return cb(gen_response('Warning', warn), json);
-            else if(ok) return cb(gen_response('OK', ok), json);
-        };
-
-        var dl_args = {
-            selector: args.selector,
-            dl_file_loc: args.dl_file_loc,
-            callback: etcb,
-            timeout: args.timeout
-        };
-        // Call click function of browser
-        m.download_image(dl_args);
-	}
-	
-    
-    else if (args.action == 'enter_text') {
-		mf_log.log('enter text conditional');
-		var ft = args.force_text || false;
-        if(!pid || !args.selector || !args.text) {
-            mf_log.log("Bad status reason: MISSING REQUIRED PARAMS ON ENTER_TEXT");
-            return cb(gen_response('Error', 'Missing required params.'), json, null, 503);
-        }
-        var m = mf_instances.get_instance(pid);
-        if(!m) {
-            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
-        }
-        // click callback function
-        var etcb = function(err, warn, ok) {
-            if(err) return cb(gen_response('Error', err), json);
-            else if(warn) return cb(gen_response('Warning', warn), json);
-            else if(ok) return cb(gen_response('OK', ok), json);
-        };
-
-        var text_args = {
-            selector: args.selector,
-            callback: etcb,
-            force_text: ft,
-            text: args.text,
-            timeout: args.timeout
-        };
-        // Call click function of browser
-        m.enter_text(text_args);
+        if(err) {
+			console.log("error on validate: " + err);
+			err = JSON.stringify({status:'Error',message:err});
+			return cb(err, 'application/json', null, 400);
+		}
+        var process_id = validated_args.pid;
+        if(!process_id) return new MF_Eddie(validated_args, instance_callback, mf_instances);
+        else return mf_instances.get_instance(pid, instance_callback);
     }
-    
-     else if (args.action == 'follow_link') {
-		 mf_log.log("in follow_link condition");
-		var ff = args.force_follow || false;
-        if(!pid || !args.selector) {
-            mf_log.log("Bad status reason: MISSING REQUIRED PARAMS ON ENTER_TEXT");
-            return cb(gen_response('Error', 'Missing required params.'), json, null, 503);
-        }
-        var m = mf_instances.get_instance(pid);
-        if(!m) {
-            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
-        }
-        // click callback function
-        var etcb = function(err, warn, ok) {
-            if(err) return cb(gen_response('Error', err), json);
-            else if(warn) return cb(gen_response('Warning', warn), json);
-            else if(ok) return cb(gen_response('OK', ok), json);
-        };
-
-        var follow_link_args = {
-            selector: args.selector,
-            callback: etcb,
-            force_follow: ff,
-            timeout: args.timeout
-        };
-        // Call click function of browser
-        m.follow_link(follow_link_args);
-    }
-    
-    // Will return content, not necessarily HTML code (e.g. JSON data may be returned)
-    else if (args.action == 'get_html') {
-        if(!pid) return cb(gen_response('Error', 'Missing phantom pid'), json);
-        var m = mf_instances.get_instance(pid);
-        if(!m) {
-            mf_log.log("Bad status reason: NO PHANTOM INSTANCE FOUND WITH PID " + pid + " - MAY HAVE TIMED OUT");
-            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
-        }
-        var gcb = function(err, html) {
-            if(err) return cb(gen_response("Error", err), json);
-            return cb(html, m.page_content_type, null, m.status_code);
-        };
-        return m.get_content(args.timeout, gcb);
-		
-	}
-
-    else if (args.action == 'click') {
-        var fc = args.force_click || false;
-        var fst = args.force_selector_type || false;
-        if(!pid || !args.selector) {
-            mf_log.log("Bad status reason: MISSING REQUIRED PARAMS ON CLICK");
-            return cb(gen_response('Error', 'Missing required params.'), json, null, 503);
-        }
-        var m = mf_instances.get_instance(pid);
-        if(!m) {
-            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
-        }
-        // click callback function
-        var ccb = function(err, warn, ok) {
-            if(err) return cb(gen_response('Error', err), json);
-            else if(warn) return cb(gen_response('Warning', warn), json);
-            else if(ok) return cb(gen_response('OK', ok), json);
-        };
-
-        var click_args = {
-            selector: args.selector,
-            callback: ccb,
-            force_click: fc,
-            force_selector_type: fst,
-            timeout: args.timeout
-        };
-        // Call click function of browser
-        m.click(click_args);
-    }
-    // Will return content, not necessarily HTML code (e.g. JSON data may be returned)
-    else if (args.action == 'get_html') {
-        if(!pid) return cb(gen_response('Error', 'Missing phantom pid'), json);
-        var m = mf_instances.get_instance(pid);
-        if(!m) {
-            mf_log.log("Bad status reason: NO PHANTOM INSTANCE FOUND WITH PID " + pid + " - MAY HAVE TIMED OUT");
-            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
-        }
-        var gcb = function(err, html) {
-            if(err) return cb(gen_response("Error", err), json);
-            return cb(html, m.page_content_type, null, m.status_code);
-        };
-        return m.get_content(args.timeout, gcb);
-    }
-
-    else if (args.action == 'back') {
-        if(!pid) return cb(gen_response('Error', 'Missing pid'), json);
-        var m = mf_instances.get_instance(pid);
-        if(!m) {
-            mf_log.log("Bad status reason: NO PHANTOM INSTANCE FOUND WITH PID " + pid + " - MAY HAVE TIMED OUT");
-            return cb(gen_response('Error', 'No phantom instance found with pid ' + pid + ' - request may have timed out.'), json, null, 503);
-        }
-        var bcb = function(err, msg) {
-            if(err) return cb(gen_response('Error', err), json);
-            return cb(gen_response('OK', msg), json);
-        }
-        return m.back(bcb);
-
-    }
-    // closes the browser and deletes the instance
-    else if (args.action == 'kill') {
-        if(!pid) return cb(gen_response('Error', 'Missing pid', json));
-        if(args.keep_alive && args.keep_alive) return cb(gen_response("Error", "Ambiguous action.  Action is kill but keep_alive option is set to true"), json, null, 503);
-        // The killing of the process will take place in the response_callback method.
-        return cb(gen_response('OK', 'Killed browser with pid ' + pid), json);
-
-    }
-
-    else {
-        mf_log.log("Bad status reason: INVALID ACTION");
-        return cb(gen_response('Error',"Invalid action: " + args.action), json, null, 503);
-    }
-
+    validate_actions_and_parameters(args, validate_cb);
 }
 
 function isEmpty(obj) {
@@ -344,6 +243,8 @@ function get_date() {
     return '[' + new Date().toISOString() + ']';
 }
 
+var last_resp = (new Date).getTime()/1000;
+
 // Creates the HTTP server which will act as a proxy.
 var server = http.createServer(function(req, res) {
     var req_args = {};
@@ -357,7 +258,6 @@ var server = http.createServer(function(req, res) {
     else if(!isEmpty(req.headers) && req.headers['mf-action']) {
         req_args = get_args(req.headers);
     }
-    
     req_args['url'] = req_args.url || req.url;
 
     if((req_args.action == 'click' || req_args.action == 'back') && typeof req_args.keep_alive == 'undefined') {
@@ -365,24 +265,26 @@ var server = http.createServer(function(req, res) {
     }
 
     var req_cookies = parseCookies(req);
-    mf_log.log("-------------------------------------------------");
-    mf_log.log("Request parameters:");
+    console.log("-------------------------------------------------");
+    console.log("Request parameters:");
     for (var key in req_args) {
-        mf_log.log(key + ": " + req_args[key]);
+        console.log(key + ": " + req_args[key]);
     }
-    mf_log.log("-------------------------------------------------");
+    console.log("-------------------------------------------------");
 
     // This function will be called back from this.parse_query_args()
-    var response_callback = function (data, content_type, cookies, code) {
-        var status_code = code || 200;
+    var response_callback = function (data, content_type, cookies, status_code) {
+		console.log('RESPONSE CALLBACK!!!!!');
+		mf_log.log('RESPONSE STATUS CODE : ' + status_code);
+		mf_log.log('RESPONSE CONTENT TYPE : ' + content_type);
+		var current_time = (new Date).getTime()/1000;
+		var time_elapsed = current_time - last_resp;
+		if(time_elapsed < 2) console.log("response callback high rate");
+		last_resp = current_time;
         if(status_code != 200 || status_code != '200') {
-            mf_log.log("mfeddie responded with bad status " + status_code + ":\n");
-            //mf_log.log(data);
-        }
-        var pid = req_cookies.pid || extract_pid(cookies);
-        if(decide_fate(req_args.keep_alive, pid)) {
-            cookies = [];
-            cookies.push(['Set-Cookie', 'pid=0']);
+            mf_log.log("mfeddie responded with non-200 status " + status_code);
+            console.log('ct: ' + content_type);
+            
         }
         var headers = [['Content-Type', content_type]];
         if(cookies) {

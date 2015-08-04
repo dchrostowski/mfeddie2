@@ -35,10 +35,11 @@ function start(self) {
                 var obj = self.instances[key];
                 var m = obj['m'];
                 if(m) {
-                    killed = true;
-                    m.exit_phantom();
+                    m.exit_phantom(function(){
+						delete self.instances[key];
+						killed = true;
+					});
                 }
-                delete self.instances[key];
             }
             if(!killed) {
                 count++;
@@ -53,33 +54,35 @@ function start(self) {
 }
 
 // Add an MF_Eddie instance to the array
-MF_Instances.prototype.push_instance = function(m) {
+MF_Instances.prototype.push_instance = function(m, cb) {
     var pid = m.ph.process.pid;
     mf_log.log("Creating browser instance with phantom pid " + pid);
     var epoch = (new Date).getTime() / 1000;
     this.instances[pid] = {m: m, time: epoch};
-    return [['Set-Cookie', 'pid='+pid]];
+    return cb(false, pid);
 }
 
 // Get an MF_Eddie instance
-MF_Instances.prototype.get_instance = function(pid) {
-    if(this.instances[pid]) return this.instances[pid].m;
-    return false;
+MF_Instances.prototype.get_instance = function(pid, cb) {
+    if(this.instances[pid]) return cb(false, this.instances[pid].m);
+    var err = {status: "Error", message: "Unable to get phantom instance with process id " + pid};
+    return(err);
 }
 
 MF_Instances.prototype.delete_instance = function(pid, cb) {
     if(!this.instances[pid]) {
+		mf_log.log("error while deleting phantom process " + pid + ': process not found');
         return cb('No pid found');
     }
+    var exit_cb = function() {
+        delete this.instances[pid];
+        return cb(false, true);
+    }.bind(this);
     var m = this.instances[pid].m;
     if(m) {
         mf_log.log("Deleting browser instance with phantom pid " + pid );
-        m.exit_phantom();
+        return m.exit_phantom(exit_cb);
     }
-    delete this.instances[pid];
-
-    if(cb && typeof cb == 'function')
-        cb();
 }
 
 MF_Instances.prototype.get_instance_count = function() {
@@ -101,6 +104,4 @@ MF_Instances.prototype.update_timeout = function(pid) {
     }
     return;
 }
-
-
 module.exports = MF_Instances;

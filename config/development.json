@@ -1,17 +1,125 @@
 {
-    "__comment": "Default",
-    "port": 8314,
-    "default_domain": {
-        "fqdn": "dcapdev2.bur.sol",
-        "ssl": false
-    },
-    
-    "timeout" : "2500",
-    "wait" : "800",
-    "max_instances" : "16",
-    "status_interval" : "5000",
-    "process_timeout_seconds" : "120",
-    "log_file" : "development.log",
-    "jquery_lib" : "./js/jquery-1.11.3.min.js",
-    "dl_file_loc" : "./downloads/downloaded_file"
+   "__comment":"Default",
+   "port":8314,
+   "default_domain":{
+      "fqdn":"dev5.bur.sol",
+      "ssl":false
+   },
+   "timeout":"2500",
+   "wait":"800",
+   "max_instances":"16",
+   "status_interval":"5000",
+   "process_timeout_seconds":"120",
+   "log_file":"development.log",
+   "jquery_lib":"./js/jquery-1.11.3.min.js",
+   "dl_file_loc":"./downloads/downloaded_file",
+   "actions":[
+      "back",
+      "click",
+      "download_image",
+      "enter_text",
+      "follow_link",
+      "get_html",
+      "kill",
+      "visit"
+   ],
+   "action_required":{
+      "back":[
+
+      ],
+      "click":[
+         "selector",
+         "pid"
+      ],
+      "download_image":[
+         "selector",
+         "dl_file_loc",
+         "pid"
+      ],
+      "enter_text":[
+         "selector",
+         "text",
+         "pid"
+      ],
+      "follow_link":[
+         "selector",
+         "pid"
+      ],
+      "get_html":[
+
+      ],
+      "visit":[
+         "user_agent",
+         "url"
+      ]
+   },
+   "param_type_reqs":{
+      "action":"string",
+      "selector":"string",
+      "dl_file_loc":"string",
+      "pid":"int",
+      "text":"string",
+      "user_agent":"string",
+      "url":"string",
+      "keep_alive":"int",
+      "timeout":"int",
+      "force":"int",
+      "force_selector_type":"string",
+      "get_content":"int",
+      "return_on_timeout":"int",
+      "load_external":"int",
+      "load_images":"int",
+      "load_css":"int",
+      "require_proxy":"int",
+      "proxy":"string",
+      "allowed":"json",
+      "disallowed":"json"
+   },
+   "action_optional_defaults":{
+      "back":{
+         "keep_alive":1
+      },
+      "click":{
+         "timeout":800,
+         "force":0,
+         "force_selector_type":"",
+         "keep_alive":1
+      },
+      "download_image":{
+         "timeout":1600,
+         "force":0,
+         "force_selector_type":"",
+         "keep_alive":1
+      },
+      "enter_text":{
+         "timeout":400,
+         "force":0,
+         "force_selector_type":"",
+         "keep_alive":1
+      },
+      "follow_link":{
+         "timeout":"2500",
+         "force":0,
+         "force_selector_type":"",
+         "keep_alive":1
+      },
+      "get_html":{
+         "timeout":800,
+         "keep_alive":0
+      },
+      "visit":{
+         "timeout":2500,
+         "get_content":0,
+         "return_on_timeout":1,
+         "load_external":1,
+         "load_images":1,
+         "load_css":1,
+         "pid":0,
+         "require_proxy":1,
+         "proxy":"",
+         "allowed":"[]",
+         "disallowed":"[]",
+         "keep_alive":0
+      }
+   }
 }
