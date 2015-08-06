@@ -11,9 +11,7 @@ var URL = require('url');
 var mf_log = require('./mf_log');
 var TIMEOUT = config.get('timeout') || 2500;
 var WAIT = config.get('wait') || 800;
-function evaluateWithArgs(fn) {
-    return "function() { return (" + fn.toString() + ").apply(this, " + JSON.stringify(Array.prototype.slice.call(arguments, 1)) + ");}";
-}
+
 MF_Eddie.prototype.get_phantom_pid = function() {
     var pid = this.ph.process.pid;
     return pid;
@@ -25,34 +23,52 @@ MF_Eddie.prototype.set_phantom = function (p, cb) {
         return cb();
     return;
 };
-MF_Eddie.prototype.set_page = function(p, cb) {
-	if(this.fatal_error) return;
-    this.page = p;
-    var warn = false;
-    if(this.timedOut && this.req_args.return_on_timeout && !this.req_args.get_content) {
-		if(!this.page_content_type && !this.mf_content_type) {
-			this.mf_content_type = 'text/html';
-		}
-		warn = "Page timed out during load.  Returned partially loaded page.";
+MF_Eddie.prototype.set_page = function(err, warn, page, cb) {
+	if(page) this.page = page;
+
+
+	//if(this.responded) { console.log("SET PAGE: ALREADY RESPONDED"); return; }
+	this.responded = true;
+	var req_args = this.req_args;
+	
+	if(err) {
+		this.fatal_error = err;
+		this.status_code = this.status_code || 500;
+		this.mf_content_type = 'application/json';
+		return cb(err);
 	}
-    if(this.req_args.get_content) {
-        return this.get_content(1500, function(err, warn, content) {
-            return cb(err, warn, content);
-        });
-    }
-    this.mf_content_type = 'application/json';
-    var ok = (warn) ? false : "Successfully visited page.";
-    return cb(false, warn, ok);
-};
+	
+	if(warn) {
+		if(this.timedOut && this.req_args.get_content) {
+			warn = false;
+			this.mf_status_code = this.page_status_code || 200;
+		}
+		else {
+			this.mf_content_type = 'application/json';
+			return cb(err, warn, false);
+		}
+	}	
+	if(page) {
+		if(this.req_args.get_content) {
+			return this.get_content(1500, function(e,w,c) {
+				this.mf_content_type = this.page_content_type || 'text/html';
+				return cb(e, w, c);
+			}.bind(this));
+		}
+		else {
+			this.mf_content_type = 'application/json';
+			this.mf_status_code = this.page_status_code || 200;
+			return cb(false, false, "OK.  Visited page.");
+		}
+	}
+}
+
 
 function MF_Eddie(args, cb, mf_instances) {
-    mf_log.log("new mfeddie called");
     var push_instance_cb = function(err, pid) {
         return cb(err, this);
     }.bind(this);
     var phantom_cb = function() {
-        mf_log.log("has ph?");
-        mf_log.log(this.ph);
         return mf_instances.push_instance(this, push_instance_cb);
     }.bind(this);
 
@@ -93,18 +109,15 @@ MF_Eddie.prototype.cookie = function() {
 // Will load a page in browser.
 MF_Eddie.prototype.visit = function(args, cb) {
 	this.current_action = 'visit';
+	this.timedOut = false;
     this.set_args(args, function() {
         this.ph.createPage(function(page) {
 			this.timedOut = false;
 			this.start_time = Date.now();
-			var pcb = function(e, w, c) {
-				if(!this.visit_responded) {
-                    cb(e, w, c);
-                    this.visit_response = true;
-				}
-			}.bind(this);
+			this.responded = false;
+			page.set('viewportSize', {width:800, height:800});
+			page.set('paperSize', {width: 1024, height: 768, border:'0px' });
             page.set('settings.userAgent', this.user_agent);
-            console.log('check the timeout val!!!! ' + this.req_args.timeout);
             page.set('settings.resourceTimeout', this.req_args.timeout);
             page.set('onConsoleMessage', function(msg) {});
             page.set('onLoadStarted', function() {
@@ -164,233 +177,225 @@ MF_Eddie.prototype.visit = function(args, cb) {
             );
             // If a resource does not load within the timeout, abort all requests and close the browser.
 			page.set('onResourceTimeout', function(request) {
-				if(request.id == 1) {
-					this.req_args.return_on_timeout = false;
-					this.fatal_error = 'Gateway Timeout: request to ' + this.req_args.url + ' timed out before receiving any response.';
-					this.mf_content_type = 'application/json';
+				console.log('timeout');
+				if(this.req_args.return_on_timeout && this.page_content_type) {
+						this.status_code = 200;
+						this.mf_content_type = this.page_content_type || 'text/html';
+						return this.set_page(false, 'Page timed out, returning partially loaded content', page, cb);
+				}
+				else {
 					this.status_code = 504;
-					return cb(this.fatal_error);
+					this.fatal_error = 'Gateway Timeout: timeout occurred before receiving any data from ' + request.url;
+					return this.set_page(this.fatal_error, false, false, cb);
 				}
 			}.bind(this));
             
             page.set('onConsoleMessage', function(msg) {
 				console.log(msg);
 			});
+			
+			this.resp_id_target = 1;
             page.set('onResourceReceived', function(resp) {
-				
-				if(resp.id == 1 && resp.stage == 'end') {
-					console.log('resp 1 returned ');
+				if(resp.id == this.resp_id_target) {
+					console.log("setting content type to " + resp.contentType);
+					console.log('setting status code to ' + resp.status);
                     this.page_content_type = resp.contentType;
                     this.status_code = resp.status;
-                    return;
-                }
-                var elapsed = Date.now() - this.start_time;
-				if(elapsed > this.req_args.timeout  && !this.timedOut) {
-					if(this.req_args.return_on_timeout) {
-						if(!this.status_code || this.status_code == 301) {
-							this.status_code = 200;
-						}
-						if(!this.page_content_type) {
-							this.mf_content_type = 'text/html';
-						}
-						this.timedOut = true;
-						return this.set_page(page, pcb);
+                    if(resp.redirectURL) {
+						console.log('increment target');
+						this.resp_id_target += 1;
+						console.log('target='+ this.resp_id_target);
 					}
 				}
+				
+				var elapsed = Date.now() - this.start_time;
+				if(elapsed > this.req_args.timeout) {
+					
+				}
+                
+                
                 // Will determine the content type to send back to crawler
             }.bind(this));
             var t = Date.now();
             this.timedOut = false;
             page.open(this.req_args.url, function(status) {
                 if(status != 'success') {
-					if(!this.page_content_type) {
-						this.mf_content_type = 'application/json';
-					}
-					if(!this.fatal_error) {
-						this.status_code = 500;
-						this.fatal_error = "Unknown error ocurred while opening page at " + this.req_args.url;
-					}
-					return cb(this.fatal_error);
+					this.fatal_error = "Unknown error ocurred while opening page at " + this.req_args.url;
+					this.mf_status_code = this.page_status_code || 500;
+					return this.set_page(this.fatal_error, false, false, cb);
 				}
-                if(this.fatal_error) {
-					this.mf_content_type = 'application/json';
-					return cb(this.fatal_error);
-				}
-                return this.set_page(page, pcb);
+                return this.set_page(false, false, page, cb);
             }.bind(this));
         }.bind(this));
     }.bind(this));
 };
 
-MF_Eddie.prototype.download_image = function(dl_args) {
-    this.current_action = 'download_image';
-    var timeout = dl_args.timeout || WAIT;
-    if(!dl_args.selector) {
-        return dl_args.callback('Missing required arguments: enter_text(selector)', false, false);
-    }
-    if(!this.page) {
-        return dl_args.callback('Error: no page loaded', false, false);
-    }
-    var eval_args = {s:dl_args.selector};
-    this.page.injectJs(config.get('jquery_lib'), function() {
-        this.page.evaluate(evaluateWithArgs(function(args) {
-            function getImgDimensions($i) {
-                return {
-                    top : $i.offset().top,
-                    left : $i.offset().left,
-                    width : $i.width(),
-                    height : $i.height()
-                }
-            }
-            var element = $(args.s);
-            if(!element) {
-                var msg = "Element " + args.s + " not found.";
-                return [msg, false, false];
-            }
-            else if(!element.is(":visible")) {
-                var msg = "Element " + args.s + " appears to be hidden.  Use force to override";
-                return [false, msg, false];
-            }
-            var img = getImgDimensions(element);
-            if(img) {
-                return [false, false, img];
-            }
-            return ["Unknown error while downloading.", false, false];
-        }, eval_args), function(res) {
-            setTimeout(function() {
-                var image;
-                if(!res[0] && !res[1]) {
-                    image = res[2];
-                    res[2] = "OK, downloaded image"
-                }
-                this.page.set('clipRect', image);
-                this.page.render(dl_args.dl_file_loc);
-                return dl_args.callback(res[0], res[1], res[2]);
-            }.bind(this), timeout);
-        }.bind(this));
-    }.bind(this));
+MF_Eddie.prototype.click = function(args, cb) {
+	this.set_args(args, function() {
+		return this.get_element(function(err, warn, ok) {
+			return cb(err, warn, ok);
+		}.bind(this));
+	}.bind(this));
 };
-MF_Eddie.prototype.follow_link = function(fl_args) {
-    this.current_action = 'follow_link';
-    var timeout = fl_args.timeout || WAIT;
-    if(!fl_args.selector) {
-        return fl_args.callback('Missing required arguments: enter_text(selector)', false, false);
-    }
-    if(!this.page) {
-        return fl_args.callback('Error: no page loaded', false, false);
-    }
-    var eval_args = {s:fl_args.selector};
-    this.page.injectJs(config.get('jquery_lib'), function() {
-        this.page.evaluate(evaluateWithArgs(function(args) {
-            var element = $(args.s);
-            if(!element) {
-                var msg = "Element " + args.s + " not found.";
-                return [msg, false, false];
-            }
-            else if(!element.is(":visible")) {
-                var msg = "Element " + args.s + " appears to be hidden.  Use force_follow=1 to override";
-                return [false, msg, false];
-            }
-            else if(!element[0].href) {
-                var msg = "Element " + args.s + " does not appear to be a link.  Could not find href attribute";
-                return [msg, false, false];
-            }
-            else {
-                location.href = element[0].href;
-            }
-            return [false, false, 'Found element ' + args.s + ' and followed link to ' + element[0].href];
-        }, eval_args), function(res) {
-            setTimeout(function() {return fl_args.callback(res[0], res[1], res[2]);}, timeout);
-        });
-    }.bind(this));
+
+MF_Eddie.prototype.download_image = function(args, cb) {
+	var timeout = this.req_args.timeout;
+	this.req_args['timeout'] = 50;
+	this.req_args['callback_timeout'] = timeout;
+	this.set_args(args, function() {
+		this.get_element(function(err, warn, clipRect) {
+			console.log('download_image callback');
+			if(err||warn) return cb(err,warn);
+			
+			this.page.set('clipRect', clipRect);
+			this.page.render(this.req_args['dl_file_loc']);
+			return setTimeout(function() {
+				var success = 'Downloaded image to ' + this.req_args['dl_file_loc'];
+				return cb(false, false, success);
+			}.bind(this), this.req_args['callback_timeout']);
+		}.bind(this));
+	}.bind(this));
 };
-MF_Eddie.prototype.enter_text = function(et_args) {
-    this.current_action = 'enter_text';
-    mf_log.log('mf_eddie.js: in enter_text fn');
-    mf_log.log("libpath?");
-    mf_log.log(this.ph.libraryPath);
-    var timeout = et_args.timeout || WAIT;
-    if(!et_args.selector) {
-        return et_args.callback('Missing required arguments: enter_text(selector)', false, false);
-    }
-    if(!this.page) {
-        return et_args.callback('Error: no page loaded', false, false);
-    }
-    var eval_args = {s:et_args.selector, f: et_args.force_text, t: et_args.text};
-    this.page.injectJs(config.get('jquery_lib'), function() {
-        this.page.evaluate(evaluateWithArgs(function(args) {
-            var element = $(args.s);
-            if(!element) {
-                var msg = "Element " + args.s + " not found.";
-                return [msg, false, false];
-            }
-            else if(!element.is(":visible")) {
-                var msg = "Element " + args.s + " appears to be hidden.  Use force_text=1 to override";
-                return [false, msg, false];
-            }
-            else {
-                element.val(args.t);
-            }
-            return [false, false, 'Found element ' + args.s + ' and entered text'];
-        }, eval_args), function(res) {
-            setTimeout(function() {return et_args.callback(res[0], res[1], res[2]);}, timeout);
-        });
-    }.bind(this));
+
+MF_Eddie.prototype.enter_text = function(args, cb) {
+	this.set_args(args, function() {
+		this.get_element(function(err, warn, ok) {
+			console.log('enter_text callback');
+			return cb(err, warn, ok);
+		}.bind(this));
+	}.bind(this));
 };
+
+MF_Eddie.prototype.follow_link = function(args, cb) {
+	this.set_args(args, function() {
+		return this.get_element(function(err, warn, ok) {
+			
+		}.bind(this));
+	}.bind(this));
+};
+function evaluateWithArgs(fn) {
+    return "function() { return (" + fn.toString() + ").apply(this, " + JSON.stringify(Array.prototype.slice.call(arguments, 1)) + ");}";
+}
+
 function get_selector_type(selector) {
     var re = /\//;
     return selector.match(re) ? 'xpath' : 'css';
 }
-// Click action
-MF_Eddie.prototype.click = function(c_args) {
-    this.current_action = 'click';
-    var timeout = c_args.timeout || WAIT;
-    if(!c_args.selector) {
-        return c_args.callback('Missing required arguments: click(selector)', false, false);
-    }
-    if(!this.page) {
-        return c_args.callback('Error: no page loaded', false, false);
-    }
-    var eval_args = {s:c_args.selector, f: c_args.force_click};
-    this.page.injectJs(config.get('jquery_lib'), function() {
-        this.page.evaluate(evaluateWithArgs(function(args) {
-            function eventFire(el, etype){
-              if (el.fireEvent) {
-                el.fireEvent('on' + etype);
-              } else {
-                var evObj = document.createEvent('Events');
-                evObj.initEvent(etype, true, false);
-                el.dispatchEvent(evObj);
-              }
-            }
-            var element = $(args.s);
-            if(!element) {
-                var msg = "Element " + args.s + " not found.";
-                return [msg, false, false];
-            }
-            else if(!element.is(":visible")) {
-                var msg = "Element " + args.s + " appears to be hidden.  Use force_text=1 to override";
-                return [false, msg, false];
-            }
-            else {
-                eventFire(element[0], 'click');
-            }
-            return [false, false, 'Found and clicked element ' + args.s];
-        }, eval_args), function(res) {
-                setTimeout(function() {return c_args.callback(res[0], res[1], res[2]);}, timeout);
-        });
-    }.bind(this));
+
+MF_Eddie.prototype.get_element = function(cb) {
+	var selector_type = this.req_args.force_selector_type || get_selector_type(this.req_args.selector);
+	console.log("determined selector type to be " + selector_type);
+	var timeout = this.req_args.timeout || WAIT;
+	var req_args = this.req_args;
+	this.mf_content_type = 'application/json';
+	this.status_code = 200;
+	var eval_args = {selector_type: selector_type, req_args: req_args};
+
+	this.page.evaluate(evaluateWithArgs(function(args) {
+		function eventFire(el, etype){
+			  if (el.fireEvent) {
+				el.fireEvent('on' + etype);
+			  } else {
+				var evObj = document.createEvent('Events');
+				evObj.initEvent(etype, true, false);
+				el.dispatchEvent(evObj);
+			  }
+			}
+			
+			function getElementByXpath(path) {
+				return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+			}
+			
+			function getElementByQuerySelector(sel) {
+				return document.querySelector(sel);
+			}
+			
+			function getImgDimensions(el) {
+				var rect = el.getBoundingClientRect();
+				
+				return {
+					top : rect.top,
+					left : rect.left,
+					width : rect.width,
+					height : rect.height
+				};
+			}
+		try {
+			console.log('inside eval');
+			
+			console.log('after fn defs');
+			var element;
+			if(args['selector_type'] == 'css') {
+				console.log('SELECTOR IS CSS');
+				element = getElementByQuerySelector(args.req_args['selector']);
+			}
+			else if(args['selector_type'] == 'xpath') {
+				console.log('SELECTOR IS XPATH');
+				element = getElementByXpath(args.req_args['selector']);
+			}
+			else {
+				var msg = "Invalid selector type '" + args['selector_type'] + "'";
+				return [msg, false, false];
+			}
+			if(element == null || typeof element === 'undefined') {
+				console.log('el is null');
+				var msg = "Could not match an element with " + args.selector_type + " selector '" + args.req_args['selector'] + "'";
+				return [msg, false, false];
+			}
+			else if(element.offsetWidth <=0 && element.offsetHeight <= 0 && !args.req_args['force']) {
+				console.log('el is not visible');
+				var msg = "Element found but appears to be hidden.  Use force=1 to override.";
+				return [false, msg, false];
+			}
+			else {
+				switch(args.req_args.action) {
+				case 'click':
+					eventFire(element, 'click');
+					return [false, false, 'Fired click event on ' + args.req_args['selector']];
+				break;
+				case 'download_image':
+				console.log('DOWN IMAGE');
+					var img = getImgDimensions(element);
+					if(img) {
+						return [false, false, img];
+					}
+					return ["Unknown error while downloading.", false, false];
+				break;
+				case 'enter_text':
+					if(typeof element.attributes.value === 'undefined') {
+						var warning = 'Warnning: ' + args.req_args.selector + ' does not appear to have a value attribute.  Use force =1 to override';
+						return [false, warning, false];
+					}
+					element.value = args.req_args['text'];
+					return [false, false, 'Set value for field ' + args.req_args.selector + ' to ' + args.req_args['text']];
+				break;
+				case 'follow_link':
+					var current_link = window.location.href;
+					var new_link = element[0].href;
+					location.href = new_link;
+					return [false, false, {'prev':current_link,'new':new_link}];
+				break;
+				}
+			}
+		}
+		catch(err) {
+			return [err.message, false, false];
+		}
+	}, eval_args), function(res) {
+			console.log('reached cb bottom');
+			console.log(typeof res);
+			var err = res[0];
+			var warn = res[1];
+			var ok = res[2];
+			console.log('bottom err, warn ok:');
+			console.log(err + ' ' + warn + ' ' + ok);
+			var ret_fn = function() {return cb(err, warn, ok);}
+			return setTimeout(ret_fn, timeout);
+	});
 };
-MF_Eddie.prototype.back = function(cb) {
-    this.current_action = 'back';
-    if(this.page.canGoBack) {
-        page.goBack();
-        return cb(null, 'Went back.');
-    }
-    else {
-        return cb("Unable to go back");
-    }
-}
+
+
+
 // Gets the page's content by returning the outer HTML of the <html> tag
 MF_Eddie.prototype.get_page_html = function(cb, to) {
     this.current_action = 'get_html';

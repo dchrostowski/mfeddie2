@@ -12,6 +12,7 @@
    "process_timeout_seconds":"120",
    "log_file":"development.log",
    "jquery_lib":"./js/jquery-1.11.3.min.js",
+   "jquery_lib_external": "http://code.jquery.com/jquery-2.1.4.min.js",
    "dl_file_loc":"./downloads/downloaded_file",
    "actions":[
       "back",
@@ -19,7 +20,7 @@
       "download_image",
       "enter_text",
       "follow_link",
-      "get_html",
+      "get_content",
       "kill",
       "visit"
    ],
@@ -45,8 +46,8 @@
          "selector",
          "pid"
       ],
-      "get_html":[
-
+      "get_content":[
+		"pid"
       ],
       "visit":[
          "user_agent",
@@ -103,7 +104,7 @@
          "force_selector_type":"",
          "keep_alive":1
       },
-      "get_html":{
+      "get_content":{
          "timeout":800,
          "keep_alive":0
       },

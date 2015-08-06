@@ -30,6 +30,7 @@ function parseCookies (request) {
     var list = {},
         rc = request.headers.cookie;
     rc && rc.split(';').forEach(function( cookie ) {
+		console.log('parsecookie: ' + cookie);
         var parts = cookie.split('=');
         list[parts.shift().trim()] = decodeURI(parts.join('='));
     });
@@ -40,8 +41,13 @@ function parseCookies (request) {
 function decide_fate(mfeddie, cb) {
 	var keep_alive = mfeddie.req_args.keep_alive
 	var fatal_error = mfeddie.fatal_error;
+	var redirect = mfeddie.redirect;
 	var del_cb = function(err, ok) {
-		return cb(err, false, ok);
+		if(err) {
+			console.log('error on delete: ' + err);
+			return cb(err, false);
+		}
+		else return cb(false, true);
 	}
     if(!keep_alive || fatal_error) {
 		var pid = mfeddie.ph.process.pid;
@@ -49,11 +55,11 @@ function decide_fate(mfeddie, cb) {
 		if(!keep_alive && !fatal_error) mf_log.log('mf_keep_alive = 0, killing phantom process ' + pid);
 		return mf_instances.delete_instance(pid, cb);
 	}
-	return cb(false, true);
+	return cb(true, false);
 }
 
 function delete_pid_cookie() {
-	return [['Set-Cookie', 'pid=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT']];
+	return [['Set-Cookie', 'pid=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'], ['Connection', 'close']];
 }
 
 function validate_type (param_name, param_val, cb) {
@@ -157,12 +163,14 @@ function parse_query_args(args, cb) {
     var validated_args;
     var mfeddie;
     var action_callback = function (err, warn, ok) {
-		return decide_fate(mfeddie, function(kill_err, alive, dead) {
+		return decide_fate(mfeddie, function(alive, dead) {
 			var status_code, content_type, content, status, cookie, mf_resp;
+			console.log('dead or alive? dead: ' + dead + ' alive: ' + alive);
 			if(alive) cookie = mfeddie.cookie();
 			if(dead) cookie = delete_pid_cookie();
+			console.log(cookie);
 			status_code = mfeddie.status_code;
-			content_type = mfeddie.mf_content_type || mfeddie.content_type
+			content_type = mfeddie.mf_content_type || mfeddie.page_content_type
 			if(mfeddie.mf_content_type && content_type === 'application/json') {
 				var message;
 				if(err) {status = 'Error'; message = err;}
@@ -180,7 +188,12 @@ function parse_query_args(args, cb) {
     };
     var instance_callback = function(err, mf) {
         mfeddie = mf;
-        if(err) return cb(err, json, null, 400);
+        console.log('instance callback');
+        if(err) {
+			console.log('err in instance callback');
+			err = JSON.stringify({status:'Error', message: err});
+			return cb(err, 'application/json', null, 400);
+		}
         delete validated_args['proxy'];
         delete validated_args['user_agent'];
         var fn = validated_args.action;
@@ -192,12 +205,14 @@ function parse_query_args(args, cb) {
         
         if(err) {
 			console.log("error on validate: " + err);
-			err = JSON.stringify({status:'Error',message:err});
-			return cb(err, 'application/json', null, 400);
+			return cb(err, 'application/json', null, 500);
 		}
         var process_id = validated_args.pid;
-        if(!process_id) return new MF_Eddie(validated_args, instance_callback, mf_instances);
-        else return mf_instances.get_instance(pid, instance_callback);
+        var action = validated_args.action;
+        console.log('found a process_id in the arguments: ' + process_id);
+        if(!process_id && action == 'visit') return new MF_Eddie(validated_args, instance_callback, mf_instances);
+        else if(!process_id && action != 'visit') return cb("Invalid Phantom process id", 'application/json', null,500);
+        else return mf_instances.get_instance(process_id, instance_callback);
     }
     validate_actions_and_parameters(args, validate_cb);
 }
@@ -296,6 +311,14 @@ var server = http.createServer(function(req, res) {
         res.writeHead(status_code, headers);
         res.end(data);
     };
+    
+    
+    for(var i in req_cookies) {
+		console.log('---------------------------');
+		console.log('COOKIES:')
+		console.log(i + ": " + req_cookies[i]);
+		console.log('-------------------------------');
+	}
 
     parse_query_args(req_args, response_callback, req_cookies.pid);
 });

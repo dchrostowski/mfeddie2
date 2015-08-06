@@ -64,9 +64,14 @@ MF_Instances.prototype.push_instance = function(m, cb) {
 
 // Get an MF_Eddie instance
 MF_Instances.prototype.get_instance = function(pid, cb) {
-    if(this.instances[pid]) return cb(false, this.instances[pid].m);
-    var err = {status: "Error", message: "Unable to get phantom instance with process id " + pid};
-    return(err);
+	console.log('get instance called');
+    if(this.instances[pid]) {
+		console.log('found an instance with pid ' + pid);
+		return cb(false, this.instances[pid].m);
+	}
+    var err = JSON.stringify({status: "Error", message: "Unable to get phantom instance with process id " + pid});
+    console.log('gonna return an error');
+    return cb(err);
 }
 
 MF_Instances.prototype.delete_instance = function(pid, cb) {
