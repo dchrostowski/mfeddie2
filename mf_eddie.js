@@ -125,8 +125,6 @@ function base_url(url) {
 MF_Eddie.prototype.set_args = function(args, cb) {
     this.req_args = {};
     for (var a in args) {
-		if (args.action == 'get_content')
-		console.log('setting ' + a + ' to ' + args[a]);
         this.req_args[a] = args[a];
     }
     cb();
@@ -209,10 +207,6 @@ MF_Eddie.prototype.visit = function(args, cb) {
             );
             // If a resource does not load within the timeout, abort all requests and close the browser.
 			page.set('onResourceTimeout', function(request) {
-				console.log('timeout');
-				console.log('TIMEOUT OCCURRED WITH MFEDDIE.VISIT_TIMEOUT = ' + this.visit_timeout);
-				console.log('TIMEOUT, CHECK PAGE_CONTENT TYPE: ' + this.page_content_type);
-				console.log('TIMEOUT, CHECK RETURN ON TIMEOUT: ' + this.return_on_timeout);
 				if(this.return_on_timeout && this.page_content_type) {
 						this.eventEmitter.emit('non_fatal_timeout');
 						console.log(this.page_content_type);
@@ -230,7 +224,7 @@ MF_Eddie.prototype.visit = function(args, cb) {
 			}.bind(this));
             
             page.set('onConsoleMessage', function(msg) {
-				console.log(msg);
+				//console.log(msg);
 			});
 			
             page.set('onResourceReceived', function(resp) {
@@ -257,7 +251,7 @@ MF_Eddie.prototype.visit = function(args, cb) {
                 if(status != 'success') {
 					this.fatal_error = "Unknown error ocurred while opening page at " + this.req_args.url;
 					this.mf_status_code = this.page_status_code || 500;
-					this.eventEmitter.emit('fatal error');
+					this.eventEmitter.emit('fatal_error');
 					return;
 				}
                 return this.set_page(false, false, page, cb);
@@ -601,6 +595,15 @@ MF_Eddie.prototype.get_content = function(args, cb) {
 	if(args) {return this.set_args(args, wrapper_fn);}
 	else {timeout = 2000; return wrapper_fn(); }
 }
+
+MF_Eddie.prototype.kill = function(args, cb) {
+	this.set_args(args, function() {
+		var ok = 'killing browser with phantom pid ' + args.pid;
+		console.log(ok);
+		return cb(false, false, ok);
+	}.bind(this));
+}
+
 // Closes the browser
 MF_Eddie.prototype.exit_phantom = function(cb) {
 	console.log('mfeddie exit phantom called');

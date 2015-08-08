@@ -47,6 +47,9 @@
       "forward":[
         "pid"
       ],
+      "kill":[
+        "pid"
+       ],
       "follow_link":[
          "selector",
          "pid"
@@ -121,6 +124,9 @@
       "forward":{
          "keep_alive":1,
          "timeout": 2000
+      },
+      "kill":{
+		"keep_alive":0
       },
       "render_page":{
           "timeout":2000,

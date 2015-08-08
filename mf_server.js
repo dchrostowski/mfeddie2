@@ -228,7 +228,9 @@ function parse_query_args(args, cb) {
         var action = validated_args.action;
         console.log('found a process_id in the arguments: ' + process_id);
         if(!process_id && action == 'visit') return new MF_Eddie(validated_args, instance_callback, mf_instances);
-        else if(!process_id && action != 'visit') return cb("Invalid Phantom process id", 'application/json', null,500);
+        else if(!process_id && action != 'visit') {
+			return cb(JSON.stringify({status:'Error',message:"Invalid Phantom process id"}), 'application/json', null,500);
+		}
         else return mf_instances.get_instance(process_id, instance_callback);
     }
     validate_actions_and_parameters(args, validate_cb);
