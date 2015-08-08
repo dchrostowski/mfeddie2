@@ -88,8 +88,7 @@
    "action_optional_defaults":{
       "back":{
          "keep_alive":1,
-         "timeout": 2000,
-         "return_on_timeout":0
+         "timeout": 2000
       },
       "click":{
          "timeout":800,
@@ -113,7 +112,6 @@
          "timeout":"2000",
          "force":0,
          "force_selector_type":"",
-         "return_on_timeout":0,
          "keep_alive":1
       },
       "get_content":{
@@ -122,8 +120,7 @@
       },
       "forward":{
          "keep_alive":1,
-         "timeout": 2000,
-         "return_on_timeout":0
+         "timeout": 2000
       },
       "render_page":{
           "timeout":2000,

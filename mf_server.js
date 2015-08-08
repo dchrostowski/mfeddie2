@@ -206,6 +206,7 @@ function parse_query_args(args, cb) {
 		mfeddie.fatal_error = false;
         delete validated_args['proxy'];
         delete validated_args['user_agent'];
+        
         var fn = validated_args.action;
         mfeddie.eventEmitter.on('fatal_error', function() {
 			mfeddie.mf_status_code = mfeddie.mf_status_code || 500;

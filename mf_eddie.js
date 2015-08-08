@@ -96,6 +96,13 @@ function MF_Eddie(args, cb, mf_instances) {
     this.mf_content_type = false;
     this.fatal_error = false;
     this.eventEmitter = new events.EventEmitter();
+    this.visit_timeout = args.timeout;
+    this.allowed = args.allowed;
+    this.disallowed = args.disallowed;
+    this.load_external = args.load_external;
+    this.load_images = args.load_images;
+    this.load_css = args.load_css;
+    this.return_on_timeout = args.return_on_timeout;
     var parameters_arg = (args.require_proxy !== 'undefined') ? {paramaters: {proxy: args.proxy}} : false;
     if(args.require_proxy) {
         return phantom.create({parameters: {proxy: args.proxy}}, function(ph) {
@@ -143,7 +150,7 @@ MF_Eddie.prototype.visit = function(args, cb) {
 			page.set('viewportSize', {width:800, height:800});
 			page.set('paperSize', {width: 1024, height: 768, border:'0px' });
             page.set('settings.userAgent', this.user_agent);
-            page.set('settings.resourceTimeout', this.req_args.timeout);
+            page.set('settings.resourceTimeout', this.visit_timeout);
             page.set('onConsoleMessage', function(msg) {});
             page.set('onLoadStarted', function() {
                 this.loadInProgress = true;
@@ -156,11 +163,11 @@ MF_Eddie.prototype.visit = function(args, cb) {
             var request_filter_args = {
                 base_url: base,
                 hostname: hostname,
-                load_external: this.req_args.load_external,
-                load_images: this.req_args.load_images,
-                load_css: this.req_args.load_css,
-                allowed: this.req_args.allowed,
-                disallowed: this.req_args.disallowed
+                load_external: this.load_external,
+                load_images: this.load_images,
+                load_css: this.load_css,
+                allowed: this.allowed,
+                disallowed: this.disallowed
             };
             // Will determine whether or not to abort a given request
             page.onResourceRequested(
@@ -203,8 +210,10 @@ MF_Eddie.prototype.visit = function(args, cb) {
             // If a resource does not load within the timeout, abort all requests and close the browser.
 			page.set('onResourceTimeout', function(request) {
 				console.log('timeout');
-				console.log('TIMEOUT OCCURRED WITH REQ_ARGS.TIMEOUT = ' + this.req_args.timeout);
-				if(this.req_args.return_on_timeout && this.page_content_type) {
+				console.log('TIMEOUT OCCURRED WITH MFEDDIE.VISIT_TIMEOUT = ' + this.visit_timeout);
+				console.log('TIMEOUT, CHECK PAGE_CONTENT TYPE: ' + this.page_content_type);
+				console.log('TIMEOUT, CHECK RETURN ON TIMEOUT: ' + this.return_on_timeout);
+				if(this.return_on_timeout && this.page_content_type) {
 						this.eventEmitter.emit('non_fatal_timeout');
 						console.log(this.page_content_type);
 						this.status_code = 200;
@@ -226,28 +235,24 @@ MF_Eddie.prototype.visit = function(args, cb) {
 			
             page.set('onResourceReceived', function(resp) {
 				console.log(resp.id);
-				if(!this.page_content_type) {
+				if(!this.page_content_type && (resp.url == this.current_url)) {
 					console.log("setting content type to " + resp.contentType);
 					console.log('setting status code to ' + resp.status);
-                    this.page_content_type = resp.contentType;
-                    this.status_code = resp.status;
                     if(resp.redirectURL) {
+						this.current_url = resp.redirectURL;
 						this.page_content_type = false;
 					}
-				}
-				
-				var elapsed = Date.now() - this.start_time;
-				if(elapsed > this.req_args.timeout) {
-					
-				}
-                
-                
-                // Will determine the content type to send back to crawler
+					else {
+						this.page_content_type = resp.contentType;
+						this.status_code = resp.status;
+					}
+				}                
             }.bind(this));
             var t = Date.now();
             this.timedOut = false;
             this.page_content_type = false;
             this.responded = false;
+            this.current_url = this.req_args.url;
             page.open(this.req_args.url, function(status) {
                 if(status != 'success') {
 					this.fatal_error = "Unknown error ocurred while opening page at " + this.req_args.url;
@@ -414,14 +419,14 @@ MF_Eddie.prototype.follow_link = function(args, cb) {
 		return this.get_element(function(err, warn, new_link) {
 			
 			if(err||warn) return cb(err, warn);
-			this.page_content_type = false;
 			
 			this.eventEmitter.on('non_fatal_timeout', function() {
 				this.status_code = 200;
 				this.mf_content_type = 'application/json';
 				return cb(false, "A timeout ocurred (possibly on the previous request).  Will continue to attempt to follow link to " + new_link);
 			});
-			
+			this.current_url = new_link;
+			this.page_content_type = false;
 			this.page.evaluate(evaluateWithArgs(function(link) {
 				location.href=link;
 			}, new_link), function(res) {
@@ -429,7 +434,7 @@ MF_Eddie.prototype.follow_link = function(args, cb) {
 				this.mf_content_type = 'application/json';
 				return setTimeout(function() {
 					return this.cache_page(new_link, this.page_content_type, function() {
-						return cb(false, false, "Followed link to " + new_link);
+						return cb(false, false, "Followed link to " + new_link + '.  Page content-type is ' + this.page_content_type);
 					}.bind(this));
 				}.bind(this),this.req_args.timeout);
 
