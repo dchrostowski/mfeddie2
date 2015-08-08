@@ -21255,3 +21255,665 @@
 [2015-08-08T08:58:53.275Z]: Deleting browser instance with phantom pid 20030
 [2015-08-08T08:58:53.276Z]: RESPONSE STATUS CODE : 200
 [2015-08-08T08:58:53.276Z]: RESPONSE CONTENT TYPE : text/html; charset=UTF-8
+[2015-08-08T10:09:16.867Z]: log init
+[2015-08-08T10:09:16.871Z]: max instances: 16
+[2015-08-08T10:09:16.871Z]: 8314
+[2015-08-08T10:09:41.535Z]: set phantom called
+[2015-08-08T10:09:41.535Z]: Creating browser instance with phantom pid 23791
+[2015-08-08T10:09:41.888Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:09:41.888Z]: 23791, 
+[2015-08-08T10:09:46.766Z]: mf_keep_alive = 0, killing phantom process 23791
+[2015-08-08T10:09:46.767Z]: Deleting browser instance with phantom pid 23791
+[2015-08-08T10:09:46.771Z]: RESPONSE STATUS CODE : undefined
+[2015-08-08T10:09:46.771Z]: RESPONSE CONTENT TYPE : false
+[2015-08-08T10:10:09.727Z]: set phantom called
+[2015-08-08T10:10:09.727Z]: Creating browser instance with phantom pid 23801
+[2015-08-08T10:10:11.910Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:10:11.910Z]: 23801, 
+[2015-08-08T10:10:13.216Z]: RESPONSE STATUS CODE : undefined
+[2015-08-08T10:10:13.216Z]: RESPONSE CONTENT TYPE : false
+[2015-08-08T10:10:16.915Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:10:16.915Z]: 23801, 
+[2015-08-08T10:10:21.921Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:10:21.922Z]: 23801, 
+[2015-08-08T10:10:26.926Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:10:26.926Z]: 23801, 
+[2015-08-08T10:10:31.927Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:10:31.927Z]: 23801, 
+[2015-08-08T10:10:36.930Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:10:36.931Z]: 23801, 
+[2015-08-08T10:10:41.936Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:10:41.936Z]: 23801, 
+[2015-08-08T10:10:46.942Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:10:46.942Z]: 23801, 
+[2015-08-08T10:10:51.947Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:10:51.947Z]: 23801, 
+[2015-08-08T10:10:56.951Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:10:56.951Z]: 23801, 
+[2015-08-08T10:11:01.953Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:01.953Z]: 23801, 
+[2015-08-08T10:11:06.957Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:06.958Z]: 23801, 
+[2015-08-08T10:11:11.963Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:11.964Z]: 23801, 
+[2015-08-08T10:11:16.969Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:16.970Z]: 23801, 
+[2015-08-08T10:11:21.975Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:21.975Z]: 23801, 
+[2015-08-08T10:11:26.979Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:26.980Z]: 23801, 
+[2015-08-08T10:11:31.986Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:31.986Z]: 23801, 
+[2015-08-08T10:11:36.990Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:36.990Z]: 23801, 
+[2015-08-08T10:11:41.996Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:41.997Z]: 23801, 
+[2015-08-08T10:11:47.002Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:47.002Z]: 23801, 
+[2015-08-08T10:11:52.005Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:52.005Z]: 23801, 
+[2015-08-08T10:11:57.011Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:11:57.011Z]: 23801, 
+[2015-08-08T10:12:02.016Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:12:02.016Z]: 23801, 
+[2015-08-08T10:12:07.021Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:12:07.021Z]: 23801, 
+[2015-08-08T10:12:22.348Z]: log init
+[2015-08-08T10:12:22.353Z]: max instances: 16
+[2015-08-08T10:12:22.353Z]: 8314
+[2015-08-08T10:12:24.920Z]: set phantom called
+[2015-08-08T10:12:24.920Z]: Creating browser instance with phantom pid 23816
+[2015-08-08T10:12:27.353Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:12:27.354Z]: 23816, 
+[2015-08-08T10:12:32.354Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:12:32.355Z]: 23816, 
+[2015-08-08T10:12:34.488Z]: RESPONSE STATUS CODE : undefined
+[2015-08-08T10:12:34.489Z]: RESPONSE CONTENT TYPE : false
+[2015-08-08T10:12:37.358Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:12:37.358Z]: 23816, 
+[2015-08-08T10:12:42.364Z]: 23816, 
+[2015-08-08T10:12:42.364Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:12:47.370Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:12:47.370Z]: 23816, 
+[2015-08-08T10:12:52.372Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:12:52.372Z]: 23816, 
+[2015-08-08T10:12:57.377Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:12:57.378Z]: 23816, 
+[2015-08-08T10:13:02.383Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:13:02.383Z]: 23816, 
+[2015-08-08T10:13:07.386Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:13:07.387Z]: 23816, 
+[2015-08-08T10:13:12.391Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:13:12.391Z]: 23816, 
+[2015-08-08T10:13:13.053Z]: set phantom called
+[2015-08-08T10:13:13.053Z]: Creating browser instance with phantom pid 23825
+[2015-08-08T10:13:17.392Z]: There are 2 instances running with these PIDs:
+[2015-08-08T10:13:17.395Z]: 23816, 23825, 
+[2015-08-08T10:13:22.395Z]: There are 2 instances running with these PIDs:
+[2015-08-08T10:13:22.396Z]: 23816, 23825, 
+[2015-08-08T10:13:23.413Z]: RESPONSE STATUS CODE : undefined
+[2015-08-08T10:13:23.413Z]: RESPONSE CONTENT TYPE : false
+[2015-08-08T10:13:27.661Z]: log init
+[2015-08-08T10:13:27.666Z]: max instances: 16
+[2015-08-08T10:13:27.666Z]: 8314
+[2015-08-08T10:13:30.261Z]: set phantom called
+[2015-08-08T10:13:30.261Z]: Creating browser instance with phantom pid 23841
+[2015-08-08T10:13:32.667Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:13:32.667Z]: 23841, 
+[2015-08-08T10:13:35.058Z]: RESPONSE STATUS CODE : undefined
+[2015-08-08T10:13:35.058Z]: RESPONSE CONTENT TYPE : false
+[2015-08-08T10:13:37.668Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:13:37.668Z]: 23841, 
+[2015-08-08T10:13:42.673Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:13:42.673Z]: 23841, 
+[2015-08-08T10:13:47.679Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:13:47.679Z]: 23841, 
+[2015-08-08T10:13:52.683Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:13:52.684Z]: 23841, 
+[2015-08-08T10:13:57.688Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:13:57.688Z]: 23841, 
+[2015-08-08T10:14:02.691Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:14:02.691Z]: 23841, 
+[2015-08-08T10:14:07.696Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:14:07.696Z]: 23841, 
+[2015-08-08T10:14:12.700Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:14:12.700Z]: 23841, 
+[2015-08-08T10:14:17.706Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:14:17.706Z]: 23841, 
+[2015-08-08T10:14:22.708Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:14:22.709Z]: 23841, 
+[2015-08-08T10:14:27.714Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:14:27.714Z]: 23841, 
+[2015-08-08T10:14:40.872Z]: log init
+[2015-08-08T10:14:40.877Z]: max instances: 16
+[2015-08-08T10:14:40.877Z]: 8314
+[2015-08-08T10:15:12.116Z]: set phantom called
+[2015-08-08T10:15:12.116Z]: Creating browser instance with phantom pid 23915
+[2015-08-08T10:15:15.906Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:15:15.906Z]: 23915, 
+[2015-08-08T10:15:19.693Z]: RESPONSE STATUS CODE : undefined
+[2015-08-08T10:15:19.694Z]: RESPONSE CONTENT TYPE : false
+[2015-08-08T10:15:20.907Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:15:20.908Z]: 23915, 
+[2015-08-08T10:15:25.913Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:15:25.913Z]: 23915, 
+[2015-08-08T10:15:30.920Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:15:30.920Z]: 23915, 
+[2015-08-08T10:15:35.925Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:15:35.925Z]: 23915, 
+[2015-08-08T10:15:40.929Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:15:40.930Z]: 23915, 
+[2015-08-08T10:15:45.935Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:15:45.935Z]: 23915, 
+[2015-08-08T10:15:50.937Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:15:50.937Z]: 23915, 
+[2015-08-08T10:15:55.941Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:15:55.941Z]: 23915, 
+[2015-08-08T10:16:00.946Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:16:00.946Z]: 23915, 
+[2015-08-08T10:16:05.950Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:16:05.950Z]: 23915, 
+[2015-08-08T10:16:10.954Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:16:10.955Z]: 23915, 
+[2015-08-08T10:16:15.960Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:16:15.960Z]: 23915, 
+[2015-08-08T10:16:20.965Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:16:20.965Z]: 23915, 
+[2015-08-08T10:16:25.965Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:16:25.966Z]: 23915, 
+[2015-08-08T10:16:30.971Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:16:30.971Z]: 23915, 
+[2015-08-08T10:16:35.974Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:16:35.974Z]: 23915, 
+[2015-08-08T10:16:38.671Z]: set phantom called
+[2015-08-08T10:16:38.672Z]: Creating browser instance with phantom pid 24005
+[2015-08-08T10:16:40.976Z]: There are 2 instances running with these PIDs:
+[2015-08-08T10:16:40.977Z]: 23915, 24005, 
+[2015-08-08T10:16:45.981Z]: There are 2 instances running with these PIDs:
+[2015-08-08T10:16:45.981Z]: 23915, 24005, 
+[2015-08-08T10:16:47.589Z]: log init
+[2015-08-08T10:16:47.594Z]: 8314
+[2015-08-08T10:16:47.593Z]: max instances: 16
+[2015-08-08T10:16:50.750Z]: set phantom called
+[2015-08-08T10:16:50.750Z]: Creating browser instance with phantom pid 24024
+[2015-08-08T10:16:52.593Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:16:52.593Z]: 24024, 
+[2015-08-08T10:16:57.599Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:16:57.599Z]: 24024, 
+[2015-08-08T10:17:00.693Z]: A fatal error occurred: Gateway Timeout: timeout occurred before http://www.google.lv/?gws_rd=cr&ei=EtfFVfCxO8iZsAGQtL-gBQ responded..  Killing phantom process 24024
+[2015-08-08T10:17:00.693Z]: Deleting browser instance with phantom pid 24024
+[2015-08-08T10:17:00.696Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:17:00.696Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:17:00.696Z]: mfeddie responded with non-200 status 504
+[2015-08-08T10:19:57.428Z]: log init
+[2015-08-08T10:19:57.434Z]: max instances: 16
+[2015-08-08T10:19:57.434Z]: 8314
+[2015-08-08T10:20:00.091Z]: set phantom called
+[2015-08-08T10:20:00.092Z]: Creating browser instance with phantom pid 24196
+[2015-08-08T10:20:00.662Z]: A fatal error occurred: Unknown error ocurred while opening page at http://google.com/.  Killing phantom process 24196
+[2015-08-08T10:20:00.663Z]: Deleting browser instance with phantom pid 24196
+[2015-08-08T10:20:00.664Z]: RESPONSE STATUS CODE : null
+[2015-08-08T10:20:00.665Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:20:10.678Z]: set phantom called
+[2015-08-08T10:20:10.678Z]: Creating browser instance with phantom pid 24216
+[2015-08-08T10:20:12.439Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:20:12.440Z]: 24216, 
+[2015-08-08T10:20:17.066Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:20:17.066Z]: RESPONSE CONTENT TYPE : text/html; charset=UTF-8
+[2015-08-08T10:20:17.441Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:20:17.441Z]: 24216, 
+[2015-08-08T10:20:22.445Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:20:22.445Z]: 24216, 
+[2015-08-08T10:20:27.449Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:20:27.449Z]: 24216, 
+[2015-08-08T10:20:32.456Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:20:32.456Z]: 24216, 
+[2015-08-08T10:20:37.459Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:20:37.459Z]: 24216, 
+[2015-08-08T10:20:42.462Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:20:42.462Z]: 24216, 
+[2015-08-08T10:20:47.467Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:20:47.468Z]: 24216, 
+[2015-08-08T10:20:52.473Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:20:52.473Z]: 24216, 
+[2015-08-08T10:20:57.474Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:20:57.474Z]: 24216, 
+[2015-08-08T10:21:02.477Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:02.477Z]: 24216, 
+[2015-08-08T10:21:07.480Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:07.480Z]: 24216, 
+[2015-08-08T10:21:12.486Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:12.486Z]: 24216, 
+[2015-08-08T10:21:17.490Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:17.490Z]: 24216, 
+[2015-08-08T10:21:22.495Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:22.496Z]: 24216, 
+[2015-08-08T10:21:27.497Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:27.497Z]: 24216, 
+[2015-08-08T10:21:32.501Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:32.501Z]: 24216, 
+[2015-08-08T10:21:37.504Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:37.504Z]: 24216, 
+[2015-08-08T10:21:42.507Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:42.507Z]: 24216, 
+[2015-08-08T10:21:47.512Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:47.513Z]: 24216, 
+[2015-08-08T10:21:52.515Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:52.515Z]: 24216, 
+[2015-08-08T10:21:57.521Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:21:57.521Z]: 24216, 
+[2015-08-08T10:22:02.524Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:22:02.524Z]: 24216, 
+[2015-08-08T10:22:07.530Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:22:07.530Z]: 24216, 
+[2015-08-08T10:29:29.080Z]: log init
+[2015-08-08T10:29:29.084Z]: max instances: 16
+[2015-08-08T10:29:29.084Z]: 8314
+[2015-08-08T10:29:31.514Z]: set phantom called
+[2015-08-08T10:29:31.514Z]: Creating browser instance with phantom pid 24791
+[2015-08-08T10:29:34.085Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:29:34.085Z]: 24791, 
+[2015-08-08T10:29:39.091Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:29:39.091Z]: 24791, 
+[2015-08-08T10:29:41.694Z]: A fatal error occurred: Gateway Timeout: timeout occurred before http://google.com/ responded..  Killing phantom process 24791
+[2015-08-08T10:29:41.694Z]: Deleting browser instance with phantom pid 24791
+[2015-08-08T10:29:41.696Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:29:41.696Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:29:41.697Z]: mfeddie responded with non-200 status 504
+[2015-08-08T10:29:47.091Z]: set phantom called
+[2015-08-08T10:29:47.091Z]: Creating browser instance with phantom pid 24819
+[2015-08-08T10:29:49.094Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:29:49.094Z]: 24819, 
+[2015-08-08T10:29:54.094Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:29:54.095Z]: 24819, 
+[2015-08-08T10:29:54.647Z]: RESPONSE STATUS CODE : undefined
+[2015-08-08T10:29:54.647Z]: RESPONSE CONTENT TYPE : false
+[2015-08-08T10:29:59.097Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:29:59.098Z]: 24819, 
+[2015-08-08T10:30:04.103Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:04.103Z]: 24819, 
+[2015-08-08T10:30:09.110Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:09.110Z]: 24819, 
+[2015-08-08T10:30:14.111Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:14.111Z]: 24819, 
+[2015-08-08T10:30:19.116Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:19.116Z]: 24819, 
+[2015-08-08T10:30:24.122Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:24.122Z]: 24819, 
+[2015-08-08T10:30:29.127Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:29.127Z]: 24819, 
+[2015-08-08T10:30:34.131Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:34.131Z]: 24819, 
+[2015-08-08T10:30:39.134Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:39.134Z]: 24819, 
+[2015-08-08T10:30:44.140Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:44.140Z]: 24819, 
+[2015-08-08T10:30:49.145Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:49.145Z]: 24819, 
+[2015-08-08T10:30:54.152Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:54.152Z]: 24819, 
+[2015-08-08T10:30:59.156Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:30:59.156Z]: 24819, 
+[2015-08-08T10:31:00.922Z]: log init
+[2015-08-08T10:31:00.926Z]: max instances: 16
+[2015-08-08T10:31:00.926Z]: 8314
+[2015-08-08T10:31:03.738Z]: set phantom called
+[2015-08-08T10:31:03.738Z]: Creating browser instance with phantom pid 24907
+[2015-08-08T10:31:05.927Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:31:05.927Z]: 24907, 
+[2015-08-08T10:31:10.932Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:31:10.932Z]: 24907, 
+[2015-08-08T10:31:13.694Z]: A fatal error occurred: Gateway Timeout: timeout occurred before http://google.com/ responded..  Killing phantom process 24907
+[2015-08-08T10:31:13.695Z]: Deleting browser instance with phantom pid 24907
+[2015-08-08T10:31:13.697Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:31:13.697Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:31:13.697Z]: mfeddie responded with non-200 status 504
+[2015-08-08T10:32:55.650Z]: log init
+[2015-08-08T10:32:55.654Z]: max instances: 16
+[2015-08-08T10:32:55.654Z]: 8314
+[2015-08-08T10:32:58.703Z]: set phantom called
+[2015-08-08T10:32:58.703Z]: Creating browser instance with phantom pid 25013
+[2015-08-08T10:33:00.655Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:00.656Z]: 25013, 
+[2015-08-08T10:33:05.657Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:05.657Z]: 25013, 
+[2015-08-08T10:33:06.087Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:33:06.087Z]: RESPONSE CONTENT TYPE : text/html; charset=UTF-8
+[2015-08-08T10:33:10.661Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:10.663Z]: 25013, 
+[2015-08-08T10:33:15.666Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:15.666Z]: 25013, 
+[2015-08-08T10:33:20.672Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:20.672Z]: 25013, 
+[2015-08-08T10:33:25.675Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:25.675Z]: 25013, 
+[2015-08-08T10:33:30.679Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:30.680Z]: 25013, 
+[2015-08-08T10:33:35.685Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:35.685Z]: 25013, 
+[2015-08-08T10:33:36.641Z]: log init
+[2015-08-08T10:33:36.645Z]: max instances: 16
+[2015-08-08T10:33:36.645Z]: 8314
+[2015-08-08T10:33:39.801Z]: set phantom called
+[2015-08-08T10:33:39.801Z]: Creating browser instance with phantom pid 25050
+[2015-08-08T10:33:41.646Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:41.646Z]: 25050, 
+[2015-08-08T10:33:42.884Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:33:42.887Z]: RESPONSE CONTENT TYPE : text/html; charset=UTF-8
+[2015-08-08T10:33:46.650Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:46.650Z]: 25050, 
+[2015-08-08T10:33:51.654Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:51.655Z]: 25050, 
+[2015-08-08T10:33:56.660Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:33:56.660Z]: 25050, 
+[2015-08-08T10:34:01.666Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:34:01.666Z]: 25050, 
+[2015-08-08T10:34:06.667Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:34:06.667Z]: 25050, 
+[2015-08-08T10:34:11.673Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:34:11.673Z]: 25050, 
+[2015-08-08T10:34:16.678Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:34:16.679Z]: 25050, 
+[2015-08-08T10:34:21.684Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:34:21.684Z]: 25050, 
+[2015-08-08T10:34:26.691Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:34:26.691Z]: 25050, 
+[2015-08-08T10:34:31.694Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:34:31.694Z]: 25050, 
+[2015-08-08T10:34:36.698Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:34:36.699Z]: 25050, 
+[2015-08-08T10:34:39.537Z]: set phantom called
+[2015-08-08T10:34:39.538Z]: Creating browser instance with phantom pid 25114
+[2015-08-08T10:34:41.700Z]: There are 2 instances running with these PIDs:
+[2015-08-08T10:34:41.700Z]: 25050, 25114, 
+[2015-08-08T10:34:43.980Z]: mf_keep_alive = 0, killing phantom process 25114
+[2015-08-08T10:34:43.980Z]: Deleting browser instance with phantom pid 25114
+[2015-08-08T10:34:43.982Z]: RESPONSE STATUS CODE : 502
+[2015-08-08T10:34:43.982Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:34:43.983Z]: mfeddie responded with non-200 status 502
+[2015-08-08T10:34:46.701Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:34:46.701Z]: 25050, 
+[2015-08-08T10:34:51.706Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:34:51.707Z]: 25050, 
+[2015-08-08T10:34:56.710Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:34:56.710Z]: 25050, 
+[2015-08-08T10:35:01.673Z]: set phantom called
+[2015-08-08T10:35:01.674Z]: Creating browser instance with phantom pid 25140
+[2015-08-08T10:35:01.710Z]: There are 2 instances running with these PIDs:
+[2015-08-08T10:35:01.710Z]: 25050, 25140, 
+[2015-08-08T10:35:03.669Z]: A fatal error occurred: Unknown error ocurred while opening page at http://google.com.  Killing phantom process 25140
+[2015-08-08T10:35:03.669Z]: Deleting browser instance with phantom pid 25140
+[2015-08-08T10:35:03.670Z]: RESPONSE STATUS CODE : null
+[2015-08-08T10:35:03.670Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:35:06.711Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:35:06.711Z]: 25050, 
+[2015-08-08T10:35:09.969Z]: set phantom called
+[2015-08-08T10:35:09.969Z]: Creating browser instance with phantom pid 25154
+[2015-08-08T10:35:11.713Z]: There are 2 instances running with these PIDs:
+[2015-08-08T10:35:11.714Z]: 25050, 25154, 
+[2015-08-08T10:35:16.718Z]: There are 2 instances running with these PIDs:
+[2015-08-08T10:35:16.718Z]: 25050, 25154, 
+[2015-08-08T10:35:21.720Z]: There are 2 instances running with these PIDs:
+[2015-08-08T10:35:21.721Z]: 25050, 25154, 
+[2015-08-08T10:35:26.722Z]: There are 2 instances running with these PIDs:
+[2015-08-08T10:35:26.722Z]: 25050, 25154, 
+[2015-08-08T10:35:31.723Z]: There are 2 instances running with these PIDs:
+[2015-08-08T10:35:31.723Z]: 25050, 25154, 
+[2015-08-08T10:35:32.695Z]: A fatal error occurred: Gateway Timeout: timeout occurred before https://ssl.gstatic.com/gb/images/i1_0430b5ba.png responded..  Killing phantom process 25154
+[2015-08-08T10:35:32.695Z]: Deleting browser instance with phantom pid 25154
+[2015-08-08T10:35:32.696Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:35:32.696Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:35:32.696Z]: mfeddie responded with non-200 status 504
+[2015-08-08T10:35:36.725Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:35:36.725Z]: 25050, 
+[2015-08-08T10:38:15.988Z]: set phantom called
+[2015-08-08T10:38:15.988Z]: Creating browser instance with phantom pid 25306
+[2015-08-08T10:38:16.842Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:38:16.842Z]: 25306, 
+[2015-08-08T10:38:21.846Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:38:21.846Z]: 25306, 
+[2015-08-08T10:38:26.695Z]: A fatal error occurred: Gateway Timeout: timeout occurred before http://www.google.com/ responded..  Killing phantom process 25306
+[2015-08-08T10:38:26.695Z]: Deleting browser instance with phantom pid 25306
+[2015-08-08T10:38:26.696Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:38:26.696Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:38:26.696Z]: mfeddie responded with non-200 status 504
+[2015-08-08T10:38:30.083Z]: set phantom called
+[2015-08-08T10:38:30.084Z]: Creating browser instance with phantom pid 25333
+[2015-08-08T10:38:31.849Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:38:31.849Z]: 25333, 
+[2015-08-08T10:38:36.486Z]: A fatal error occurred: Unknown error ocurred while opening page at http://google.com.  Killing phantom process 25333
+[2015-08-08T10:38:36.486Z]: Deleting browser instance with phantom pid 25333
+[2015-08-08T10:38:36.487Z]: RESPONSE STATUS CODE : null
+[2015-08-08T10:38:36.487Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:38:40.476Z]: set phantom called
+[2015-08-08T10:38:40.476Z]: Creating browser instance with phantom pid 25344
+[2015-08-08T10:38:41.850Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:38:41.850Z]: 25344, 
+[2015-08-08T10:38:46.856Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:38:46.856Z]: 25344, 
+[2015-08-08T10:38:50.695Z]: A fatal error occurred: Gateway Timeout: timeout occurred before http://google.com/ responded..  Killing phantom process 25344
+[2015-08-08T10:38:50.695Z]: Deleting browser instance with phantom pid 25344
+[2015-08-08T10:38:50.697Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:38:50.698Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:38:50.698Z]: mfeddie responded with non-200 status 504
+[2015-08-08T10:39:00.770Z]: log init
+[2015-08-08T10:39:00.774Z]: max instances: 16
+[2015-08-08T10:39:00.775Z]: 8314
+[2015-08-08T10:39:28.564Z]: set phantom called
+[2015-08-08T10:39:28.564Z]: Creating browser instance with phantom pid 25408
+[2015-08-08T10:39:30.796Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:39:30.796Z]: 25408, 
+[2015-08-08T10:39:35.801Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:39:35.801Z]: 25408, 
+[2015-08-08T10:39:38.694Z]: A fatal error occurred: Gateway Timeout: timeout occurred before http://google.com/ responded..  Killing phantom process 25408
+[2015-08-08T10:39:38.694Z]: Deleting browser instance with phantom pid 25408
+[2015-08-08T10:39:38.696Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:39:38.696Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:39:38.696Z]: mfeddie responded with non-200 status 504
+[2015-08-08T10:39:40.949Z]: set phantom called
+[2015-08-08T10:39:40.950Z]: Creating browser instance with phantom pid 25427
+[2015-08-08T10:39:45.804Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:39:45.808Z]: 25427, 
+[2015-08-08T10:39:48.780Z]: mf_keep_alive = 0, killing phantom process 25427
+[2015-08-08T10:39:48.780Z]: Deleting browser instance with phantom pid 25427
+[2015-08-08T10:39:48.781Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:39:48.781Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:39:53.415Z]: set phantom called
+[2015-08-08T10:39:53.415Z]: Creating browser instance with phantom pid 25455
+[2015-08-08T10:39:55.811Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:39:55.812Z]: 25455, 
+[2015-08-08T10:39:59.036Z]: mf_keep_alive = 0, killing phantom process 25455
+[2015-08-08T10:39:59.036Z]: Deleting browser instance with phantom pid 25455
+[2015-08-08T10:39:59.037Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:39:59.037Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:40:01.713Z]: set phantom called
+[2015-08-08T10:40:01.713Z]: Creating browser instance with phantom pid 25465
+[2015-08-08T10:40:05.816Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:40:05.816Z]: 25465, 
+[2015-08-08T10:40:07.438Z]: mf_keep_alive = 0, killing phantom process 25465
+[2015-08-08T10:40:07.438Z]: Deleting browser instance with phantom pid 25465
+[2015-08-08T10:40:07.439Z]: RESPONSE STATUS CODE : 503
+[2015-08-08T10:40:07.439Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:40:07.440Z]: mfeddie responded with non-200 status 503
+[2015-08-08T10:40:10.102Z]: set phantom called
+[2015-08-08T10:40:10.102Z]: Creating browser instance with phantom pid 25482
+[2015-08-08T10:40:10.817Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:40:10.817Z]: 25482, 
+[2015-08-08T10:40:15.818Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:40:15.818Z]: 25482, 
+[2015-08-08T10:40:20.693Z]: A fatal error occurred: Gateway Timeout: timeout occurred before https://www.google.com/?gws_rd=ssl responded..  Killing phantom process 25482
+[2015-08-08T10:40:20.693Z]: Deleting browser instance with phantom pid 25482
+[2015-08-08T10:40:20.693Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:40:20.693Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:40:20.694Z]: mfeddie responded with non-200 status 504
+[2015-08-08T10:40:24.004Z]: set phantom called
+[2015-08-08T10:40:24.004Z]: Creating browser instance with phantom pid 25498
+[2015-08-08T10:40:25.819Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:40:25.819Z]: 25498, 
+[2015-08-08T10:40:30.822Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:40:30.822Z]: 25498, 
+[2015-08-08T10:40:32.778Z]: mf_keep_alive = 0, killing phantom process 25498
+[2015-08-08T10:40:32.778Z]: Deleting browser instance with phantom pid 25498
+[2015-08-08T10:40:32.779Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:40:32.779Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:40:35.284Z]: set phantom called
+[2015-08-08T10:40:35.284Z]: Creating browser instance with phantom pid 25516
+[2015-08-08T10:40:35.822Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:40:35.822Z]: 25516, 
+[2015-08-08T10:40:37.773Z]: mf_keep_alive = 0, killing phantom process 25516
+[2015-08-08T10:40:37.773Z]: Deleting browser instance with phantom pid 25516
+[2015-08-08T10:40:37.775Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:40:37.775Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:40:40.227Z]: set phantom called
+[2015-08-08T10:40:40.227Z]: Creating browser instance with phantom pid 25533
+[2015-08-08T10:40:40.823Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:40:40.823Z]: 25533, 
+[2015-08-08T10:40:43.601Z]: mf_keep_alive = 0, killing phantom process 25533
+[2015-08-08T10:40:43.601Z]: Deleting browser instance with phantom pid 25533
+[2015-08-08T10:40:43.602Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:40:43.603Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:40:48.783Z]: set phantom called
+[2015-08-08T10:40:48.783Z]: Creating browser instance with phantom pid 25544
+[2015-08-08T10:40:50.824Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:40:50.824Z]: 25544, 
+[2015-08-08T10:40:51.376Z]: mf_keep_alive = 0, killing phantom process 25544
+[2015-08-08T10:40:51.376Z]: Deleting browser instance with phantom pid 25544
+[2015-08-08T10:40:51.377Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:40:51.377Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:40:53.745Z]: set phantom called
+[2015-08-08T10:40:53.745Z]: Creating browser instance with phantom pid 25554
+[2015-08-08T10:40:55.123Z]: mf_keep_alive = 0, killing phantom process 25554
+[2015-08-08T10:40:55.123Z]: Deleting browser instance with phantom pid 25554
+[2015-08-08T10:40:55.124Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:40:55.124Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:40:57.376Z]: set phantom called
+[2015-08-08T10:40:57.376Z]: Creating browser instance with phantom pid 25572
+[2015-08-08T10:41:00.825Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:41:00.825Z]: 25572, 
+[2015-08-08T10:41:02.114Z]: mf_keep_alive = 0, killing phantom process 25572
+[2015-08-08T10:41:02.114Z]: Deleting browser instance with phantom pid 25572
+[2015-08-08T10:41:02.116Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:41:02.116Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:41:04.535Z]: set phantom called
+[2015-08-08T10:41:04.535Z]: Creating browser instance with phantom pid 25583
+[2015-08-08T10:41:05.825Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:41:05.826Z]: 25583, 
+[2015-08-08T10:41:06.831Z]: mf_keep_alive = 0, killing phantom process 25583
+[2015-08-08T10:41:06.831Z]: Deleting browser instance with phantom pid 25583
+[2015-08-08T10:41:06.832Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:41:06.832Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:41:08.665Z]: set phantom called
+[2015-08-08T10:41:08.665Z]: Creating browser instance with phantom pid 25592
+[2015-08-08T10:41:10.826Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:41:10.826Z]: 25592, 
+[2015-08-08T10:41:11.686Z]: mf_keep_alive = 0, killing phantom process 25592
+[2015-08-08T10:41:11.686Z]: Deleting browser instance with phantom pid 25592
+[2015-08-08T10:41:11.687Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:41:11.687Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:41:14.063Z]: set phantom called
+[2015-08-08T10:41:14.063Z]: Creating browser instance with phantom pid 25604
+[2015-08-08T10:41:14.624Z]: A fatal error occurred: Unknown error ocurred while opening page at http://google.com.  Killing phantom process 25604
+[2015-08-08T10:41:14.624Z]: Deleting browser instance with phantom pid 25604
+[2015-08-08T10:41:14.625Z]: RESPONSE STATUS CODE : null
+[2015-08-08T10:41:14.625Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:41:18.374Z]: set phantom called
+[2015-08-08T10:41:18.374Z]: Creating browser instance with phantom pid 25613
+[2015-08-08T10:41:20.828Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:41:20.828Z]: 25613, 
+[2015-08-08T10:41:25.510Z]: mf_keep_alive = 0, killing phantom process 25613
+[2015-08-08T10:41:25.510Z]: Deleting browser instance with phantom pid 25613
+[2015-08-08T10:41:25.511Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:41:25.511Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:41:41.956Z]: set phantom called
+[2015-08-08T10:41:41.956Z]: Creating browser instance with phantom pid 25650
+[2015-08-08T10:41:44.519Z]: mf_keep_alive = 0, killing phantom process 25650
+[2015-08-08T10:41:44.520Z]: Deleting browser instance with phantom pid 25650
+[2015-08-08T10:41:44.522Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:41:44.522Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:41:46.976Z]: set phantom called
+[2015-08-08T10:41:46.976Z]: Creating browser instance with phantom pid 25661
+[2015-08-08T10:41:48.862Z]: mf_keep_alive = 0, killing phantom process 25661
+[2015-08-08T10:41:48.862Z]: Deleting browser instance with phantom pid 25661
+[2015-08-08T10:41:48.867Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:41:48.867Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:41:50.972Z]: set phantom called
+[2015-08-08T10:41:50.972Z]: Creating browser instance with phantom pid 25670
+[2015-08-08T10:41:55.839Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:41:55.840Z]: 25670, 
+[2015-08-08T10:42:00.694Z]: A fatal error occurred: Gateway Timeout: timeout occurred before http://google.com/ responded..  Killing phantom process 25670
+[2015-08-08T10:42:00.694Z]: Deleting browser instance with phantom pid 25670
+[2015-08-08T10:42:00.695Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:42:00.695Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:42:00.695Z]: mfeddie responded with non-200 status 504
+[2015-08-08T10:42:02.769Z]: set phantom called
+[2015-08-08T10:42:02.769Z]: Creating browser instance with phantom pid 25681
+[2015-08-08T10:42:05.842Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:42:05.842Z]: 25681, 
+[2015-08-08T10:42:10.843Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:42:10.843Z]: 25681, 
+[2015-08-08T10:42:14.693Z]: A fatal error occurred: Gateway Timeout: timeout occurred before http://www.google.com.br/?gfe_rd=cr&ei=_NzFVbf2Aeip8wf_l4CoCg responded..  Killing phantom process 25681
+[2015-08-08T10:42:14.693Z]: Deleting browser instance with phantom pid 25681
+[2015-08-08T10:42:14.694Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:42:14.694Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:42:14.694Z]: mfeddie responded with non-200 status 504
+[2015-08-08T10:42:19.339Z]: set phantom called
+[2015-08-08T10:42:19.339Z]: Creating browser instance with phantom pid 25704
+[2015-08-08T10:42:20.844Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:42:20.844Z]: 25704, 
+[2015-08-08T10:42:25.219Z]: mf_keep_alive = 0, killing phantom process 25704
+[2015-08-08T10:42:25.219Z]: Deleting browser instance with phantom pid 25704
+[2015-08-08T10:42:25.220Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:42:25.220Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:42:32.112Z]: set phantom called
+[2015-08-08T10:42:32.112Z]: Creating browser instance with phantom pid 25716
+[2015-08-08T10:42:35.847Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:42:35.848Z]: 25716, 
+[2015-08-08T10:42:39.939Z]: mf_keep_alive = 0, killing phantom process 25716
+[2015-08-08T10:42:39.939Z]: Deleting browser instance with phantom pid 25716
+[2015-08-08T10:42:39.940Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:42:39.940Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:42:42.514Z]: set phantom called
+[2015-08-08T10:42:42.514Z]: Creating browser instance with phantom pid 25729
+[2015-08-08T10:42:44.719Z]: mf_keep_alive = 0, killing phantom process 25729
+[2015-08-08T10:42:44.719Z]: Deleting browser instance with phantom pid 25729
+[2015-08-08T10:42:44.723Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:42:44.723Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:42:49.672Z]: set phantom called
+[2015-08-08T10:42:49.673Z]: Creating browser instance with phantom pid 25752
+[2015-08-08T10:42:50.851Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:42:50.852Z]: 25752, 
+[2015-08-08T10:42:55.854Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:42:55.854Z]: 25752, 
+[2015-08-08T10:42:59.258Z]: mf_keep_alive = 0, killing phantom process 25752
+[2015-08-08T10:42:59.258Z]: Deleting browser instance with phantom pid 25752
+[2015-08-08T10:42:59.259Z]: RESPONSE STATUS CODE : 503
+[2015-08-08T10:42:59.259Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:42:59.259Z]: mfeddie responded with non-200 status 503
+[2015-08-08T10:43:01.425Z]: set phantom called
+[2015-08-08T10:43:01.425Z]: Creating browser instance with phantom pid 25770
+[2015-08-08T10:43:05.748Z]: mf_keep_alive = 0, killing phantom process 25770
+[2015-08-08T10:43:05.748Z]: Deleting browser instance with phantom pid 25770
+[2015-08-08T10:43:05.749Z]: RESPONSE STATUS CODE : 200
+[2015-08-08T10:43:05.750Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:43:10.552Z]: set phantom called
+[2015-08-08T10:43:10.552Z]: Creating browser instance with phantom pid 25782
+[2015-08-08T10:43:10.856Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:43:10.856Z]: 25782, 
+[2015-08-08T10:43:15.861Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:43:15.861Z]: 25782, 
+[2015-08-08T10:43:20.695Z]: A fatal error occurred: Gateway Timeout: timeout occurred before http://google.com/ responded..  Killing phantom process 25782
+[2015-08-08T10:43:20.695Z]: Deleting browser instance with phantom pid 25782
+[2015-08-08T10:43:20.696Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:43:20.696Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:43:20.696Z]: mfeddie responded with non-200 status 504
+[2015-08-08T10:43:24.264Z]: set phantom called
+[2015-08-08T10:43:24.265Z]: Creating browser instance with phantom pid 25793
+[2015-08-08T10:43:25.862Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:43:25.863Z]: 25793, 
+[2015-08-08T10:43:30.868Z]: There are 1 instances running with these PIDs:
+[2015-08-08T10:43:30.869Z]: 25793, 
+[2015-08-08T10:43:34.694Z]: A fatal error occurred: Gateway Timeout: timeout occurred before http://google.com/ responded..  Killing phantom process 25793
+[2015-08-08T10:43:34.694Z]: Deleting browser instance with phantom pid 25793
+[2015-08-08T10:43:34.695Z]: RESPONSE STATUS CODE : 504
+[2015-08-08T10:43:34.695Z]: RESPONSE CONTENT TYPE : application/json
+[2015-08-08T10:43:34.695Z]: mfeddie responded with non-200 status 504
