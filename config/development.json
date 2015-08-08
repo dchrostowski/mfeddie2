@@ -5,7 +5,7 @@
       "fqdn":"dev5.bur.sol",
       "ssl":false
    },
-   "timeout":"2500",
+   "timeout":"5000",
    "wait":"800",
    "max_instances":"16",
    "status_interval":"5000",
@@ -20,13 +20,15 @@
       "download_image",
       "enter_text",
       "follow_link",
+      "forward",
       "get_content",
       "kill",
+      "render_page",
       "visit"
    ],
    "action_required":{
       "back":[
-
+        "pid"
       ],
       "click":[
          "selector",
@@ -42,12 +44,19 @@
          "text",
          "pid"
       ],
+      "forward":[
+        "pid"
+      ],
       "follow_link":[
          "selector",
          "pid"
       ],
       "get_content":[
 		"pid"
+      ],
+      "render_page":[
+          "dl_file_loc",
+          "pid"
       ],
       "visit":[
          "user_agent",
@@ -78,7 +87,9 @@
    },
    "action_optional_defaults":{
       "back":{
-         "keep_alive":1
+         "keep_alive":1,
+         "timeout": 2000,
+         "return_on_timeout":0
       },
       "click":{
          "timeout":800,
@@ -87,7 +98,7 @@
          "keep_alive":1
       },
       "download_image":{
-         "timeout":1600,
+         "timeout":2000,
          "force":0,
          "force_selector_type":"",
          "keep_alive":1
@@ -99,14 +110,24 @@
          "keep_alive":1
       },
       "follow_link":{
-         "timeout":"2500",
+         "timeout":"2000",
          "force":0,
          "force_selector_type":"",
+         "return_on_timeout":0,
          "keep_alive":1
       },
       "get_content":{
          "timeout":800,
          "keep_alive":0
+      },
+      "forward":{
+         "keep_alive":1,
+         "timeout": 2000,
+         "return_on_timeout":0
+      },
+      "render_page":{
+          "timeout":2000,
+          "keep_alive":1
       },
       "visit":{
          "timeout":2500,

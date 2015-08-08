@@ -9,6 +9,7 @@ var config = require('config');
 var phantom = require('phantom');
 var URL = require('url');
 var mf_log = require('./mf_log');
+var events = require('events');
 var TIMEOUT = config.get('timeout') || 2500;
 var WAIT = config.get('wait') || 800;
 
@@ -23,44 +24,63 @@ MF_Eddie.prototype.set_phantom = function (p, cb) {
         return cb();
     return;
 };
+
+MF_Eddie.prototype.cache_page = function(url, content_type, cb) {
+	if(!content_type) content_type = 'text/html';
+	console.log('cached ' + url + " with content type " + content_type);
+	
+	var cached_content = {url: url, content_type:content_type};
+	this.history_queue.push(cached_content);
+	this.history_queue_pos++;
+	console.log("at position " + this.history_queue_pos + " in history.");
+	return cb();
+}
+
 MF_Eddie.prototype.set_page = function(err, warn, page, cb) {
-	if(page) this.page = page;
-
-
-	//if(this.responded) { console.log("SET PAGE: ALREADY RESPONDED"); return; }
-	this.responded = true;
-	var req_args = this.req_args;
-	
-	if(err) {
-		this.fatal_error = err;
-		this.status_code = this.status_code || 500;
-		this.mf_content_type = 'application/json';
-		return cb(err);
-	}
-	
-	if(warn) {
-		if(this.timedOut && this.req_args.get_content) {
-			warn = false;
-			this.mf_status_code = this.page_status_code || 200;
-		}
-		else {
+	var set_page_fn = function() {
+		if(page) this.page = page;
+		this.responded = true;
+		var req_args = this.req_args;
+		
+		if(err) {
+			this.fatal_error = err;
+			this.status_code = this.status_code || 500;
 			this.mf_content_type = 'application/json';
-			return cb(err, warn, false);
+			return cb(err);
 		}
-	}	
-	if(page) {
-		if(this.req_args.get_content) {
-			return this.get_content(1500, function(e,w,c) {
-				this.mf_content_type = this.page_content_type || 'text/html';
-				return cb(e, w, c);
-			}.bind(this));
+		
+		if(warn) {
+			console.log("get content? " + this.req_args.get_content);
+			console.log("page content_type? " + this.page_content_type);
+			console.log("mf content_type? " + this.mf_content_type);
+			if(this.timedOut && this.req_args.get_content) {
+				warn = false;
+				this.mf_content_type = this.page_content_type;
+				this.mf_status_code = this.page_status_code || 200;
+			}
+			else {
+				this.mf_content_type = 'application/json';
+				return cb(err, warn, false);
+			}
+		}	
+		if(page) {
+			if(this.req_args.get_content) {
+				return this.get_content(false, function(e,w,c) {
+					return cb(e, w, c);
+				}.bind(this));
+			}
+			else {
+				this.mf_content_type = 'application/json';
+				this.mf_status_code = this.page_status_code || 200;
+				return cb(false, false, "OK.  Visited page.");
+			}
 		}
-		else {
-			this.mf_content_type = 'application/json';
-			this.mf_status_code = this.page_status_code || 200;
-			return cb(false, false, "OK.  Visited page.");
-		}
+	}.bind(this);
+	
+	if(!err && !this.responded && page && this.req_args.keep_alive) {
+		this.cache_page(this.req_args.url, this.page_content_type, set_page_fn);
 	}
+	else { set_page_fn(); }
 }
 
 
@@ -71,9 +91,11 @@ function MF_Eddie(args, cb, mf_instances) {
     var phantom_cb = function() {
         return mf_instances.push_instance(this, push_instance_cb);
     }.bind(this);
-
+	this.history_queue = [];
+	this.history_queue_pos = -1;
     this.mf_content_type = false;
     this.fatal_error = false;
+    this.eventEmitter = new events.EventEmitter();
     var parameters_arg = (args.require_proxy !== 'undefined') ? {paramaters: {proxy: args.proxy}} : false;
     if(args.require_proxy) {
         return phantom.create({parameters: {proxy: args.proxy}}, function(ph) {
@@ -96,6 +118,8 @@ function base_url(url) {
 MF_Eddie.prototype.set_args = function(args, cb) {
     this.req_args = {};
     for (var a in args) {
+		if (args.action == 'get_content')
+		console.log('setting ' + a + ' to ' + args[a]);
         this.req_args[a] = args[a];
     }
     cb();
@@ -108,6 +132,7 @@ MF_Eddie.prototype.cookie = function() {
 
 // Will load a page in browser.
 MF_Eddie.prototype.visit = function(args, cb) {
+	this.responded = false;
 	this.current_action = 'visit';
 	this.timedOut = false;
     this.set_args(args, function() {
@@ -178,15 +203,20 @@ MF_Eddie.prototype.visit = function(args, cb) {
             // If a resource does not load within the timeout, abort all requests and close the browser.
 			page.set('onResourceTimeout', function(request) {
 				console.log('timeout');
+				console.log('TIMEOUT OCCURRED WITH REQ_ARGS.TIMEOUT = ' + this.req_args.timeout);
 				if(this.req_args.return_on_timeout && this.page_content_type) {
+						this.eventEmitter.emit('non_fatal_timeout');
+						console.log(this.page_content_type);
 						this.status_code = 200;
 						this.mf_content_type = this.page_content_type || 'text/html';
+						this.timedOut = true;
 						return this.set_page(false, 'Page timed out, returning partially loaded content', page, cb);
 				}
 				else {
 					this.status_code = 504;
-					this.fatal_error = 'Gateway Timeout: timeout occurred before receiving any data from ' + request.url;
-					return this.set_page(this.fatal_error, false, false, cb);
+					this.fatal_error = "Gateway Timeout: timeout occurred before " + request.url + " responded.";
+					this.eventEmitter.emit('fatal_error');
+					return;
 				}
 			}.bind(this));
             
@@ -194,17 +224,15 @@ MF_Eddie.prototype.visit = function(args, cb) {
 				console.log(msg);
 			});
 			
-			this.resp_id_target = 1;
             page.set('onResourceReceived', function(resp) {
-				if(resp.id == this.resp_id_target) {
+				console.log(resp.id);
+				if(!this.page_content_type) {
 					console.log("setting content type to " + resp.contentType);
 					console.log('setting status code to ' + resp.status);
                     this.page_content_type = resp.contentType;
                     this.status_code = resp.status;
                     if(resp.redirectURL) {
-						console.log('increment target');
-						this.resp_id_target += 1;
-						console.log('target='+ this.resp_id_target);
+						this.page_content_type = false;
 					}
 				}
 				
@@ -218,11 +246,14 @@ MF_Eddie.prototype.visit = function(args, cb) {
             }.bind(this));
             var t = Date.now();
             this.timedOut = false;
+            this.page_content_type = false;
+            this.responded = false;
             page.open(this.req_args.url, function(status) {
                 if(status != 'success') {
 					this.fatal_error = "Unknown error ocurred while opening page at " + this.req_args.url;
 					this.mf_status_code = this.page_status_code || 500;
-					return this.set_page(this.fatal_error, false, false, cb);
+					this.eventEmitter.emit('fatal error');
+					return;
 				}
                 return this.set_page(false, false, page, cb);
             }.bind(this));
@@ -230,18 +261,126 @@ MF_Eddie.prototype.visit = function(args, cb) {
     }.bind(this));
 };
 
+MF_Eddie.prototype.back = function(args, cb) {
+	this.set_args(args, function() {
+		if(this.history_queue_pos <= 0) {
+			return cb(false, "Can't go back, there are no previously loaded pages.\n");
+		}
+		this.history_queue_pos--;
+		var cached = this.history_queue[this.history_queue_pos];
+		this.eventEmitter.on('non_fatal_timeout', function() {
+			this.status_code = 200;
+			this.mf_content_type = 'application/json';
+			return cb(false, "A timeout ocurred (possibly on the previous request).  Will continue to attempt to go back to " + cached.url);
+		}.bind(this));
+		this.page.goBack();
+		var ret_fn = function() {
+			this.page_content_type = cached.content_type;
+			return cb(false, false, "Went back to " + cached.url);
+		}.bind(this);
+		return setTimeout(ret_fn, this.req_args.timeout);
+		
+	}.bind(this));
+	/*
+	console.log('back function called');
+	this.set_args(args, function() {
+		this.status_code = 200;
+		this.mf_content_type = 'application/json';
+		if(this.history_queue_pos < 1) {
+			return cb("There is no previous page cached.", false, false);
+		}
+		var cached_content = this.history_queue[--this.history_queue_pos];
+		console.log('is cached_content defined? ' + cached_content);
+		console.log('cached_content url? ' + cached_content.url);
+		console.log('cached_content url alt? ' + cached_content['url']);
+		console.log('page content type? ' + cached_content.content_type);
+		
+		this.page.setContent(cached_content.content, cached_content.url, function(res) {
+			var err = false, warn = false, ok = false;
+			this.page_content_type = cached_content.content_type;
+			if(res == 'fail') {
+				warn = 'An unknown failure ocurred while loading cached content.  Try using the visit action to reload ' + cached_content.url;
+			}
+			else {
+				ok = "Went back to " + cached_content.url;
+			}
+			var ret_fn = function() {return cb(err, warn, ok);};
+			return setTimeout(ret_fn, this.req_args.timeout);
+		}.bind(this));
+	}.bind(this));
+	* */
+}
+
+MF_Eddie.prototype.forward = function(args, cb) {
+	this.set_args(args, function() {
+		if(this.history_queue_pos >= this.history_queue.length-1) {
+			return cb(false, "Can't go forward, there are no previously loaded pages.\n");
+		}
+		this.history_queue_pos--;
+		this.page.goBack();
+		var ret_fn = function() {
+			var cached = this.history_queue[this.history_queue_pos];
+			this.page_content_type = cached.content_type;
+			return cb(false, false, "Went back to " + cached.url);
+		}.bind(this);
+		return setTimeout(ret_fn, this.req_args.timeout);
+		
+	}.bind(this));
+	/*
+	this.set_args(args, function() {
+		this.status_code = 200;
+		this.mf_content_type = 'application/json';
+		
+		if(this.history_queue_pos >= this.history_queue.length - 1) {
+			return cb("There is no forward page cached.", false, false);
+		}
+		var cached_content = this.history_queue[++this.history_queue_pos];
+		console.log('is cached_content defined? ' + cached_content);
+		console.log('cached_content url? ' + cached_content.url);
+		console.log('cached_content url alt? ' + cached_content['url']);
+		console.log('page content type? ' + cached_content.content_type);
+		
+		
+		this.page.setContent(cached_content.content, cached_content.url, function(res) {
+			var err = false, warn = false, ok = false;
+			this.page_content_type = cached_content.content_type;
+			if(res == 'fail') {
+				warn = 'An unknown failure ocurred while loading cached content.  Try using the visit action to reload ' + cached_content.url;
+			}
+			else {
+				ok = "Went forward to " + cached_content.url;
+			}
+			var ret_fn = function() {return cb(err, warn, ok);};
+			return setTimeout(ret_fn, this.req_args.timeout);
+		}.bind(this));
+	}.bind(this));
+	* */
+}
+
+MF_Eddie.prototype.render_page = function(args, cb) {
+	this.set_args(args, function() {
+	this.page.render(this.req_args.dl_file_loc);
+	var ret_cb = function() {
+		this.mf_content_type = 'application/json';
+		this.mf_status_code = 200;
+		return cb(false, false, "OK, renderd page to " + this.req_args.dl_file_loc); 
+	}.bind(this);
+	return setTimeout(ret_cb, this.req_args.timeout);
+	
+	}.bind(this));
+}
+
 MF_Eddie.prototype.click = function(args, cb) {
 	this.set_args(args, function() {
 		return this.get_element(function(err, warn, ok) {
-			return cb(err, warn, ok);
+			this.mf_content_type = 'application/json';
+			this.mf_status_code = 200;
+			return setTimeout(function() {cb(err, warn, ok);}, this.req_args.timeout);
 		}.bind(this));
 	}.bind(this));
 };
 
 MF_Eddie.prototype.download_image = function(args, cb) {
-	var timeout = this.req_args.timeout;
-	this.req_args['timeout'] = 50;
-	this.req_args['callback_timeout'] = timeout;
 	this.set_args(args, function() {
 		this.get_element(function(err, warn, clipRect) {
 			console.log('download_image callback');
@@ -250,9 +389,11 @@ MF_Eddie.prototype.download_image = function(args, cb) {
 			this.page.set('clipRect', clipRect);
 			this.page.render(this.req_args['dl_file_loc']);
 			return setTimeout(function() {
+				this.status_code = 200;
+				this.mf_content_type = 'application/json';
 				var success = 'Downloaded image to ' + this.req_args['dl_file_loc'];
 				return cb(false, false, success);
-			}.bind(this), this.req_args['callback_timeout']);
+			}.bind(this), this.req_args.timeout);
 		}.bind(this));
 	}.bind(this));
 };
@@ -261,6 +402,8 @@ MF_Eddie.prototype.enter_text = function(args, cb) {
 	this.set_args(args, function() {
 		this.get_element(function(err, warn, ok) {
 			console.log('enter_text callback');
+			this.status_code = 200;
+			this.mf_content_type = 'application/json';
 			return cb(err, warn, ok);
 		}.bind(this));
 	}.bind(this));
@@ -268,7 +411,43 @@ MF_Eddie.prototype.enter_text = function(args, cb) {
 
 MF_Eddie.prototype.follow_link = function(args, cb) {
 	this.set_args(args, function() {
-		return this.get_element(function(err, warn, ok) {
+		return this.get_element(function(err, warn, new_link) {
+			
+			if(err||warn) return cb(err, warn);
+			this.page_content_type = false;
+			
+			this.eventEmitter.on('non_fatal_timeout', function() {
+				this.status_code = 200;
+				this.mf_content_type = 'application/json';
+				return cb(false, "A timeout ocurred (possibly on the previous request).  Will continue to attempt to follow link to " + new_link);
+			});
+			
+			this.page.evaluate(evaluateWithArgs(function(link) {
+				location.href=link;
+			}, new_link), function(res) {
+				this.status_code = 200;
+				this.mf_content_type = 'application/json';
+				return setTimeout(function() {
+					return this.cache_page(new_link, this.page_content_type, function() {
+						return cb(false, false, "Followed link to " + new_link);
+					}.bind(this));
+				}.bind(this),this.req_args.timeout);
+
+			}.bind(this));
+			/*this.page.open(new_link, function(status) {
+				if (status != 'success') {
+					this.status_code = 500;
+					this.mf_content_type = 'application/json';
+					return cb(false, 'Unable to open page at ' + new_link, false);
+				}
+				else {
+					console.log('FOLLOW LINK: was page content type set?' + this.page_content_type);
+					
+					return this.cache_page(new_link, this.page_content_type, function() {
+						return cb(false, false, "Followed link to " + new_link);
+					}.bind(this));
+				}
+			}.bind(this));*/
 			
 		}.bind(this));
 	}.bind(this));
@@ -284,11 +463,8 @@ function get_selector_type(selector) {
 
 MF_Eddie.prototype.get_element = function(cb) {
 	var selector_type = this.req_args.force_selector_type || get_selector_type(this.req_args.selector);
-	console.log("determined selector type to be " + selector_type);
 	var timeout = this.req_args.timeout || WAIT;
 	var req_args = this.req_args;
-	this.mf_content_type = 'application/json';
-	this.status_code = 200;
 	var eval_args = {selector_type: selector_type, req_args: req_args};
 
 	this.page.evaluate(evaluateWithArgs(function(args) {
@@ -321,16 +497,11 @@ MF_Eddie.prototype.get_element = function(cb) {
 				};
 			}
 		try {
-			console.log('inside eval');
-			
-			console.log('after fn defs');
 			var element;
 			if(args['selector_type'] == 'css') {
-				console.log('SELECTOR IS CSS');
 				element = getElementByQuerySelector(args.req_args['selector']);
 			}
 			else if(args['selector_type'] == 'xpath') {
-				console.log('SELECTOR IS XPATH');
 				element = getElementByXpath(args.req_args['selector']);
 			}
 			else {
@@ -338,12 +509,10 @@ MF_Eddie.prototype.get_element = function(cb) {
 				return [msg, false, false];
 			}
 			if(element == null || typeof element === 'undefined') {
-				console.log('el is null');
 				var msg = "Could not match an element with " + args.selector_type + " selector '" + args.req_args['selector'] + "'";
-				return [msg, false, false];
+				return [false, msg, false];
 			}
 			else if(element.offsetWidth <=0 && element.offsetHeight <= 0 && !args.req_args['force']) {
-				console.log('el is not visible');
 				var msg = "Element found but appears to be hidden.  Use force=1 to override.";
 				return [false, msg, false];
 			}
@@ -371,9 +540,9 @@ MF_Eddie.prototype.get_element = function(cb) {
 				break;
 				case 'follow_link':
 					var current_link = window.location.href;
-					var new_link = element[0].href;
-					location.href = new_link;
-					return [false, false, {'prev':current_link,'new':new_link}];
+					var new_link = element.href;
+					//location.href = new_link;
+					return [false, false, new_link];
 				break;
 				}
 			}
@@ -382,15 +551,12 @@ MF_Eddie.prototype.get_element = function(cb) {
 			return [err.message, false, false];
 		}
 	}, eval_args), function(res) {
-			console.log('reached cb bottom');
 			console.log(typeof res);
 			var err = res[0];
 			var warn = res[1];
 			var ok = res[2];
-			console.log('bottom err, warn ok:');
 			console.log(err + ' ' + warn + ' ' + ok);
-			var ret_fn = function() {return cb(err, warn, ok);}
-			return setTimeout(ret_fn, timeout);
+			return cb(err, warn, ok);
 	});
 };
 
@@ -410,19 +576,25 @@ MF_Eddie.prototype.get_page_html = function(cb, to) {
     setTimeout(getPageHTML, timeout);
 }
 // Simply gets the page's content
-MF_Eddie.prototype.get_content = function(to, cb) {
-    var timeout = to || WAIT;
-    console.log('GET CONTENT FUNCTION');
-    if(this.page) console.log('this.page = TRUE');
-    var getContent = function() {
-        this.page.getContent(function(res) {
-			console.log('GET CONTENT CALLBACK');
-			if(res) console.log('RES IS TRUE');
-            if(res) return cb(false, false, res);
-        return cb("No content returned");
-        });
-    }.bind(this);
-    return setTimeout(getContent, timeout);
+MF_Eddie.prototype.get_content = function(args, cb) {
+	var timeout = false;
+	var wrapper_fn = function() {
+		if(!timeout) timeout = this.req_args.content;
+		var getContent = function() {
+			this.page.getContent(function(res) {
+				if(res) {
+					this.mf_content_type = this.page_content_type || this.mf_content_type;
+					return cb(false, false, res);
+				}
+				this.mf_content_type = 'application/json';
+				return cb("No content returned");
+			}.bind(this));
+		}.bind(this);
+		return setTimeout(getContent, timeout);
+	}.bind(this);
+	
+	if(args) {return this.set_args(args, wrapper_fn);}
+	else {timeout = 2000; return wrapper_fn(); }
 }
 // Closes the browser
 MF_Eddie.prototype.exit_phantom = function(cb) {

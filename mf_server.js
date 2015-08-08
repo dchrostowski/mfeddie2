@@ -39,8 +39,12 @@ function parseCookies (request) {
 }
 
 function decide_fate(mfeddie, cb) {
+	console.log('KEEP ALIVE CALLED');
+
 	var keep_alive = mfeddie.req_args.keep_alive
 	var fatal_error = mfeddie.fatal_error;
+	console.log('keep alive: ' + keep_alive);
+	console.log('fatal error: ' + fatal_error);
 	var redirect = mfeddie.redirect;
 	var del_cb = function(err, ok) {
 		if(err) {
@@ -163,8 +167,13 @@ function parse_query_args(args, cb) {
     var validated_args;
     var mfeddie;
     var action_callback = function (err, warn, ok) {
+		mfeddie.eventEmitter.removeAllListeners();
 		return decide_fate(mfeddie, function(alive, dead) {
 			var status_code, content_type, content, status, cookie, mf_resp;
+			console.log('action callback, check mfeddie history queue');
+			for(var i in mfeddie.history_queue) {
+				console.log(mfeddie.history_queue[i].url);
+			}
 			console.log('dead or alive? dead: ' + dead + ' alive: ' + alive);
 			if(alive) cookie = mfeddie.cookie();
 			if(dead) cookie = delete_pid_cookie();
@@ -194,9 +203,16 @@ function parse_query_args(args, cb) {
 			err = JSON.stringify({status:'Error', message: err});
 			return cb(err, 'application/json', null, 400);
 		}
+		mfeddie.fatal_error = false;
         delete validated_args['proxy'];
         delete validated_args['user_agent'];
         var fn = validated_args.action;
+        mfeddie.eventEmitter.on('fatal_error', function() {
+			mfeddie.mf_status_code = mfeddie.mf_status_code || 500;
+			mfeddie.mf_content_type = 'application/json';
+			mfeddie.fatal_error = mfeddie.fatal_error || 'Unknown error occurred during ' + fn;
+			return action_callback(mfeddie.fatal_error);
+		});
         mfeddie[fn](validated_args, action_callback);
     };
 
@@ -292,6 +308,7 @@ var server = http.createServer(function(req, res) {
 		console.log('RESPONSE CALLBACK!!!!!');
 		mf_log.log('RESPONSE STATUS CODE : ' + status_code);
 		mf_log.log('RESPONSE CONTENT TYPE : ' + content_type);
+		if(!status_code) status_code = 200;
 		var current_time = (new Date).getTime()/1000;
 		var time_elapsed = current_time - last_resp;
 		if(time_elapsed < 2) console.log("response callback high rate");
