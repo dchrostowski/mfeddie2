@@ -26,7 +26,7 @@ MF_Eddie.prototype.set_phantom = function (p, cb) {
 };
 
 MF_Eddie.prototype.cache_page = function(url, content_type, cb) {
-	if(!content_type) content_type = 'text/html';
+	if(typeof content_type === 'undefined' || !content_type) content_type = 'text/html';
 	console.log('cached ' + url + " with content type " + content_type);
 	
 	var cached_content = {url: url, content_type:content_type};
@@ -338,12 +338,14 @@ MF_Eddie.prototype.forward = function(args, cb) {
 		if(this.history_queue_pos >= this.history_queue.length-1) {
 			return cb(false, "Can't go forward, there are no previously loaded pages.\n");
 		}
-		this.history_queue_pos--;
-		this.page.goBack();
+		this.history_queue_pos++;
+		this.page.goForward();
 		var ret_fn = function() {
 			var cached = this.history_queue[this.history_queue_pos];
+			console.log('cached:');
+			console.log(cached);
 			this.page_content_type = cached.content_type;
-			return cb(false, false, "Went back to " + cached.url);
+			return cb(false, false, "Went forward to " + cached.url);
 		}.bind(this);
 		return setTimeout(ret_fn, this.req_args.timeout);
 		
