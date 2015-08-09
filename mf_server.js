@@ -30,7 +30,7 @@ function parseCookies (request) {
     var list = {},
         rc = request.headers.cookie;
     rc && rc.split(';').forEach(function( cookie ) {
-		console.log('parsecookie: ' + cookie);
+		//console.log('parsecookie: ' + cookie);
         var parts = cookie.split('=');
         list[parts.shift().trim()] = decodeURI(parts.join('='));
     });
@@ -39,16 +39,13 @@ function parseCookies (request) {
 }
 
 function decide_fate(mfeddie, cb) {
-	console.log('KEEP ALIVE CALLED');
 
 	var keep_alive = mfeddie.req_args.keep_alive
 	var fatal_error = mfeddie.fatal_error;
-	console.log('keep alive: ' + keep_alive);
-	console.log('fatal error: ' + fatal_error);
+	
 	var redirect = mfeddie.redirect;
 	var del_cb = function(err, ok) {
 		if(err) {
-			console.log('error on delete: ' + err);
 			return cb(err, false);
 		}
 		else return cb(false, true);
@@ -170,11 +167,6 @@ function parse_query_args(args, cb) {
 		mfeddie.eventEmitter.removeAllListeners();
 		return decide_fate(mfeddie, function(alive, dead) {
 			var status_code, content_type, content, status, cookie, mf_resp;
-			console.log('action callback, check mfeddie history queue');
-			for(var i in mfeddie.history_queue) {
-				console.log(mfeddie.history_queue[i].url);
-			}
-			console.log('dead or alive? dead: ' + dead + ' alive: ' + alive);
 			if(alive) cookie = mfeddie.cookie();
 			if(dead) cookie = delete_pid_cookie();
 			console.log(cookie);
@@ -197,9 +189,7 @@ function parse_query_args(args, cb) {
     };
     var instance_callback = function(err, mf) {
         mfeddie = mf;
-        console.log('instance callback');
         if(err) {
-			console.log('err in instance callback');
 			err = JSON.stringify({status:'Error', message: err});
 			return cb(err, 'application/json', null, 400);
 		}
@@ -221,12 +211,10 @@ function parse_query_args(args, cb) {
         validated_args = v_args;
         
         if(err) {
-			console.log("error on validate: " + err);
 			return cb(err, 'application/json', null, 500);
 		}
         var process_id = validated_args.pid;
         var action = validated_args.action;
-        console.log('found a process_id in the arguments: ' + process_id);
         if(!process_id && action == 'visit') return new MF_Eddie(validated_args, instance_callback, mf_instances);
         else if(!process_id && action != 'visit') {
 			return cb(JSON.stringify({status:'Error',message:"Invalid Phantom process id"}), 'application/json', null,500);
@@ -308,9 +296,6 @@ var server = http.createServer(function(req, res) {
 
     // This function will be called back from this.parse_query_args()
     var response_callback = function (data, content_type, cookies, status_code) {
-		console.log('RESPONSE CALLBACK!!!!!');
-		mf_log.log('RESPONSE STATUS CODE : ' + status_code);
-		mf_log.log('RESPONSE CONTENT TYPE : ' + content_type);
 		if(!status_code) status_code = 200;
 		var current_time = (new Date).getTime()/1000;
 		var time_elapsed = current_time - last_resp;
@@ -331,14 +316,6 @@ var server = http.createServer(function(req, res) {
         res.writeHead(status_code, headers);
         res.end(data);
     };
-    
-    
-    for(var i in req_cookies) {
-		console.log('---------------------------');
-		console.log('COOKIES:')
-		console.log(i + ": " + req_cookies[i]);
-		console.log('-------------------------------');
-	}
 
     parse_query_args(req_args, response_callback, req_cookies.pid);
 });

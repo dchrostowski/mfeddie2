@@ -142,20 +142,23 @@ MF_Eddie.prototype.visit = function(args, cb) {
 	this.timedOut = false;
     this.set_args(args, function() {
         this.ph.createPage(function(page) {
-			this.timedOut = false;
-			this.start_time = Date.now();
-			this.responded = false;
 			page.set('viewportSize', {width:800, height:800});
 			page.set('paperSize', {width: 1024, height: 768, border:'0px' });
             page.set('settings.userAgent', this.user_agent);
             page.set('settings.resourceTimeout', this.visit_timeout);
-            page.set('onConsoleMessage', function(msg) {});
+            
+            
             page.set('onLoadStarted', function() {
-                this.loadInProgress = true;
+				this.load_in_progress = true;
             }.bind(this));
+            
+            
+            
             page.set('onLoadFinished', function() {
-                this.loadInProgress = false;
+				this.load_in_progress = false;
             }.bind(this));
+            
+            
             var hostname = URL.parse(this.req_args.url).hostname.replace('www.', '');
             var base = base_url(this.req_args.url);
             var request_filter_args = {
@@ -214,7 +217,6 @@ MF_Eddie.prototype.visit = function(args, cb) {
 				if(this.return_on_timeout && this.page_content_type) {
 						console.log('non fatal timeout');
 						this.eventEmitter.emit('non_fatal_timeout');
-						console.log(this.page_content_type);
 						this.status_code = 200;
 						this.mf_content_type = this.page_content_type || 'text/html';
 						this.timedOut = true;
@@ -227,19 +229,33 @@ MF_Eddie.prototype.visit = function(args, cb) {
 					return;
 				}
 			}.bind(this));
+			
+			page.set('onNavigationRequested', function(url, type, willNavigate, main) {
+				if(main) {
+					this.current_url = url;
+					this.page_content_type = false;
+				}
+				
+			}.bind(this));
             
             page.set('onConsoleMessage', function(msg) {
-				//console.log(msg);
+				console.log(msg);
 			});
 			
             page.set('onResourceReceived', function(resp) {
-				console.log(resp.id);
+				//console.log(resp.id);
+				if(resp.redirectURL) {
+					console.log('REDIRECT');
+				}
 				var resp_url = resp.url.replace(/\//g, "");
 				var curr_url = this.current_url.replace(/\//g, "");
 				if(!this.page_content_type && (resp_url == curr_url)) {
 					console.log('url req and resp match');
 					console.log("setting content type to " + resp.contentType);
 					console.log('setting status code to ' + resp.status);
+					this.page_content_type = resp.contentType;
+					this.status_code = resp.status;
+					return;
                     if(resp.redirectURL) {
 						this.current_url = resp.redirectURL;
 						this.page_content_type = false;
@@ -250,12 +266,10 @@ MF_Eddie.prototype.visit = function(args, cb) {
 					}
 				}                
             }.bind(this));
-            var t = Date.now();
+            
+            
             this.timedOut = false;
             this.page_content_type = false;
-            this.responded = false;
-            this.current_url = this.req_args.url;
-            console.log('UCRRENT URL: ' + this.current_url);
             page.open(this.req_args.url, function(status) {
                 if(status != 'success') {
 					this.fatal_error = "Unknown error ocurred while opening page at " + this.req_args.url;
@@ -428,8 +442,6 @@ MF_Eddie.prototype.follow_link = function(args, cb) {
 				this.mf_content_type = 'application/json';
 				return cb(false, "A timeout ocurred (possibly on the previous request).  Will continue to attempt to follow link to " + new_link);
 			});
-			this.current_url = new_link;
-			this.page_content_type = false;
 			this.page.evaluate(evaluateWithArgs(function(link) {
 				location.href=link;
 			}, new_link), function(res) {
