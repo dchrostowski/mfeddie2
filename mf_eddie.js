@@ -27,12 +27,9 @@ MF_Eddie.prototype.set_phantom = function (p, cb) {
 
 MF_Eddie.prototype.cache_page = function(url, content_type, cb) {
 	if(typeof content_type === 'undefined' || !content_type) content_type = 'text/html';
-	console.log('cached ' + url + " with content type " + content_type);
-	
 	var cached_content = {url: url, content_type:content_type};
 	this.history_queue.push(cached_content);
 	this.history_queue_pos++;
-	console.log("at position " + this.history_queue_pos + " in history.");
 	return cb();
 }
 
@@ -50,9 +47,6 @@ MF_Eddie.prototype.set_page = function(err, warn, page, cb) {
 		}
 		
 		if(warn) {
-			console.log("get content? " + this.req_args.get_content);
-			console.log("page content_type? " + this.page_content_type);
-			console.log("mf content_type? " + this.mf_content_type);
 			if(this.timedOut && this.req_args.get_content) {
 				warn = false;
 				this.mf_content_type = this.page_content_type;
@@ -210,10 +204,6 @@ MF_Eddie.prototype.visit = function(args, cb) {
             );
             // If a resource does not load within the timeout, abort all requests and close the browser.
 			page.set('onResourceTimeout', function(request) {
-				console.log('timeout');
-				console.log('TIMEOUT OCCURRED WITH MFEDDIE.VISIT_TIMEOUT = ' + this.visit_timeout);
-				console.log('TIMEOUT, CHECK PAGE_CONTENT TYPE: ' + this.page_content_type);
-				console.log('TIMEOUT, CHECK RETURN ON TIMEOUT: ' + this.return_on_timeout);
 				if(this.return_on_timeout && this.page_content_type) {
 						console.log('non fatal timeout');
 						this.eventEmitter.emit('non_fatal_timeout');
@@ -239,20 +229,13 @@ MF_Eddie.prototype.visit = function(args, cb) {
 			}.bind(this));
             
             page.set('onConsoleMessage', function(msg) {
-				console.log(msg);
+				//console.log(msg);
 			});
 			
             page.set('onResourceReceived', function(resp) {
-				//console.log(resp.id);
-				if(resp.redirectURL) {
-					console.log('REDIRECT');
-				}
 				var resp_url = resp.url.replace(/\//g, "");
 				var curr_url = this.current_url.replace(/\//g, "");
 				if(!this.page_content_type && (resp_url == curr_url)) {
-					console.log('url req and resp match');
-					console.log("setting content type to " + resp.contentType);
-					console.log('setting status code to ' + resp.status);
 					this.page_content_type = resp.contentType;
 					this.status_code = resp.status;
 					return;
@@ -303,34 +286,6 @@ MF_Eddie.prototype.back = function(args, cb) {
 		return setTimeout(ret_fn, this.req_args.timeout);
 		
 	}.bind(this));
-	/*
-	console.log('back function called');
-	this.set_args(args, function() {
-		this.status_code = 200;
-		this.mf_content_type = 'application/json';
-		if(this.history_queue_pos < 1) {
-			return cb("There is no previous page cached.", false, false);
-		}
-		var cached_content = this.history_queue[--this.history_queue_pos];
-		console.log('is cached_content defined? ' + cached_content);
-		console.log('cached_content url? ' + cached_content.url);
-		console.log('cached_content url alt? ' + cached_content['url']);
-		console.log('page content type? ' + cached_content.content_type);
-		
-		this.page.setContent(cached_content.content, cached_content.url, function(res) {
-			var err = false, warn = false, ok = false;
-			this.page_content_type = cached_content.content_type;
-			if(res == 'fail') {
-				warn = 'An unknown failure ocurred while loading cached content.  Try using the visit action to reload ' + cached_content.url;
-			}
-			else {
-				ok = "Went back to " + cached_content.url;
-			}
-			var ret_fn = function() {return cb(err, warn, ok);};
-			return setTimeout(ret_fn, this.req_args.timeout);
-		}.bind(this));
-	}.bind(this));
-	* */
 }
 
 MF_Eddie.prototype.forward = function(args, cb) {
@@ -342,43 +297,12 @@ MF_Eddie.prototype.forward = function(args, cb) {
 		this.page.goForward();
 		var ret_fn = function() {
 			var cached = this.history_queue[this.history_queue_pos];
-			console.log('cached:');
-			console.log(cached);
 			this.page_content_type = cached.content_type;
 			return cb(false, false, "Went forward to " + cached.url);
 		}.bind(this);
 		return setTimeout(ret_fn, this.req_args.timeout);
 		
 	}.bind(this));
-	/*
-	this.set_args(args, function() {
-		this.status_code = 200;
-		this.mf_content_type = 'application/json';
-		
-		if(this.history_queue_pos >= this.history_queue.length - 1) {
-			return cb("There is no forward page cached.", false, false);
-		}
-		var cached_content = this.history_queue[++this.history_queue_pos];
-		console.log('is cached_content defined? ' + cached_content);
-		console.log('cached_content url? ' + cached_content.url);
-		console.log('cached_content url alt? ' + cached_content['url']);
-		console.log('page content type? ' + cached_content.content_type);
-		
-		
-		this.page.setContent(cached_content.content, cached_content.url, function(res) {
-			var err = false, warn = false, ok = false;
-			this.page_content_type = cached_content.content_type;
-			if(res == 'fail') {
-				warn = 'An unknown failure ocurred while loading cached content.  Try using the visit action to reload ' + cached_content.url;
-			}
-			else {
-				ok = "Went forward to " + cached_content.url;
-			}
-			var ret_fn = function() {return cb(err, warn, ok);};
-			return setTimeout(ret_fn, this.req_args.timeout);
-		}.bind(this));
-	}.bind(this));
-	* */
 }
 
 MF_Eddie.prototype.render_page = function(args, cb) {
@@ -407,7 +331,6 @@ MF_Eddie.prototype.click = function(args, cb) {
 MF_Eddie.prototype.download_image = function(args, cb) {
 	this.set_args(args, function() {
 		this.get_element(function(err, warn, clipRect) {
-			console.log('download_image callback');
 			if(err||warn) return cb(err,warn);
 			
 			this.page.set('clipRect', clipRect);
@@ -425,7 +348,6 @@ MF_Eddie.prototype.download_image = function(args, cb) {
 MF_Eddie.prototype.enter_text = function(args, cb) {
 	this.set_args(args, function() {
 		this.get_element(function(err, warn, ok) {
-			console.log('enter_text callback');
 			this.status_code = 200;
 			this.mf_content_type = 'application/json';
 			return cb(err, warn, ok);
@@ -456,20 +378,6 @@ MF_Eddie.prototype.follow_link = function(args, cb) {
 				}.bind(this),this.req_args.timeout);
 
 			}.bind(this));
-			/*this.page.open(new_link, function(status) {
-				if (status != 'success') {
-					this.status_code = 500;
-					this.mf_content_type = 'application/json';
-					return cb(false, 'Unable to open page at ' + new_link, false);
-				}
-				else {
-					console.log('FOLLOW LINK: was page content type set?' + this.page_content_type);
-					
-					return this.cache_page(new_link, this.page_content_type, function() {
-						return cb(false, false, "Followed link to " + new_link);
-					}.bind(this));
-				}
-			}.bind(this));*/
 			
 		}.bind(this));
 	}.bind(this));
@@ -545,7 +453,6 @@ MF_Eddie.prototype.get_element = function(cb) {
 					return [false, false, 'Fired click event on ' + args.req_args['selector']];
 				break;
 				case 'download_image':
-				console.log('DOWN IMAGE');
 					var img = getImgDimensions(element);
 					if(img) {
 						return [false, false, img];
@@ -573,11 +480,9 @@ MF_Eddie.prototype.get_element = function(cb) {
 			return [err.message, false, false];
 		}
 	}, eval_args), function(res) {
-			console.log(typeof res);
 			var err = res[0];
 			var warn = res[1];
 			var ok = res[2];
-			console.log(err + ' ' + warn + ' ' + ok);
 			return cb(err, warn, ok);
 	});
 };
@@ -622,14 +527,12 @@ MF_Eddie.prototype.get_content = function(args, cb) {
 MF_Eddie.prototype.kill = function(args, cb) {
 	this.set_args(args, function() {
 		var ok = 'killing browser with phantom pid ' + args.pid;
-		console.log(ok);
 		return cb(false, false, ok);
 	}.bind(this));
 }
 
 // Closes the browser
 MF_Eddie.prototype.exit_phantom = function(cb) {
-	console.log('mfeddie exit phantom called');
     var pid = this.get_phantom_pid();
     if(this.page) this.page.close();
     this.ph.exit();
