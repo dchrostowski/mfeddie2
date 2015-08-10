@@ -42,6 +42,7 @@ function decide_fate(mfeddie, cb) {
 
 	var keep_alive = mfeddie.req_args.keep_alive
 	var fatal_error = mfeddie.fatal_error;
+	var pid = mfeddie.ph.process.pid;
 	
 	var redirect = mfeddie.redirect;
 	var del_cb = function(err, ok) {
@@ -51,12 +52,13 @@ function decide_fate(mfeddie, cb) {
 		else return cb(false, true);
 	}
     if(!keep_alive || fatal_error) {
-		var pid = mfeddie.ph.process.pid;
 		if(fatal_error) mf_log.log('A fatal error occurred: ' + fatal_error + '.  Killing phantom process ' + pid);
 		if(!keep_alive && !fatal_error) mf_log.log('mf_keep_alive = 0, killing phantom process ' + pid);
 		return mf_instances.delete_instance(pid, cb);
 	}
-	return cb(true, false);
+	mf_instances.update_timeout(pid, function() {
+		return cb(true, false);
+	});
 }
 
 function delete_pid_cookie() {
@@ -164,7 +166,9 @@ function parse_query_args(args, cb) {
     var validated_args;
     var mfeddie;
     var action_callback = function (err, warn, ok) {
-		mfeddie.eventEmitter.removeAllListeners();
+		if(mfeddie.eventEmitter) {
+			mfeddie.eventEmitter.removeAllListeners();
+		}
 		return decide_fate(mfeddie, function(alive, dead) {
 			var status_code, content_type, content, status, cookie, mf_resp;
 			if(alive) cookie = mfeddie.cookie();
@@ -191,7 +195,7 @@ function parse_query_args(args, cb) {
         mfeddie = mf;
         if(err) {
 			err = JSON.stringify({status:'Error', message: err});
-			return cb(err, 'application/json', null, 400);
+			return cb(err, 'application/json', delete_pid_cookie(), 400);
 		}
 		mfeddie.fatal_error = false;
         delete validated_args['proxy'];
@@ -217,7 +221,8 @@ function parse_query_args(args, cb) {
         var action = validated_args.action;
         if(!process_id && action == 'visit') return new MF_Eddie(validated_args, instance_callback, mf_instances);
         else if(!process_id && action != 'visit') {
-			return cb(JSON.stringify({status:'Error',message:"Invalid Phantom process id"}), 'application/json', null,500);
+			var err = JSON.stringify({status:'Error',message:"Invalid Phantom process id"});
+			return cb(err, 'application/json', delete_pid_cookie() ,500);
 		}
         else return mf_instances.get_instance(process_id, instance_callback);
     }

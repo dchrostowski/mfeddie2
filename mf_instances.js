@@ -99,14 +99,13 @@ MF_Instances.prototype.get_instance_count = function() {
 }
 
 // Will update the time of a browser instance, effectively resetting its timeout to PROCESS_TIMEOUT_SECONDS
-MF_Instances.prototype.update_timeout = function(pid) {
+MF_Instances.prototype.update_timeout = function(pid, cb) {
     var m = this.instances[pid];
     if(m) {
         mf_log.log("Updating timeout for browser instance with phantom pid " + pid);
         var current_time = (new Date).getTime()/1000;
         this.instances[pid].time = current_time;
-        return;
     }
-    return;
+    return cb();
 }
 module.exports = MF_Instances;
