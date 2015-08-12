@@ -119,6 +119,8 @@ function base_url(url) {
 MF_Eddie.prototype.set_args = function(args, cb) {
     this.req_args = {};
     for (var a in args) {
+		if(args['action'] == 'enter_text')
+		console.log(a + ': ' + args[a]);
         this.req_args[a] = args[a];
     }
     cb();
@@ -170,7 +172,7 @@ MF_Eddie.prototype.visit = function(args, cb) {
                     // If allowed, do nothing, return.
                     for(var i in scoped_args['allowed']) {
                         if(requestData['url'].indexOf(scoped_args['allowed'][i]) > -1) {
-							console.log('allow request: ' + requestData['url'] + ' is explicitly allowed.');
+							//console.log('allow request: ' + requestData['url'] + ' is explicitly allowed.');
                             return;
                         }
                     }
@@ -188,15 +190,15 @@ MF_Eddie.prototype.visit = function(args, cb) {
                     if(!scoped_args['load_external'] && requestData['url'].indexOf(scoped_args['base_url']) != 0 && requestData['url'].indexOf('/') != 0)
                         is_external = true;
                     if(!scoped_args['load_external'] && !is_subdomain && is_external) {
-                        console.log('abort request: ' + requestData['url'] + ' is external');
+                        //console.log('abort request: ' + requestData['url'] + ' is external');
                         return request.abort();
                     }
                     if(!scoped_args['load_images'] && (/\.(tif|tiff|png|jpg|jpeg|gif)($|\?)/).test(requestData['url'])) {
-                        console.log('abort request: '  + requestData['url'] + ' appears to be an image file');
+                        //console.log('abort request: '  + requestData['url'] + ' appears to be an image file');
                         return request.abort();
                     }
                     if(!scoped_args['load_css'] && (/\.css($|\?)/).test(requestData['url'])) {
-                        console.log('abort request: '  + requestData['url'] + ' appears to be css');
+                        //console.log('abort request: '  + requestData['url'] + ' appears to be css');
                         return request.abort();
                     }
                     return;
@@ -229,10 +231,11 @@ MF_Eddie.prototype.visit = function(args, cb) {
 			}.bind(this));
             
             page.set('onConsoleMessage', function(msg) {
-				//console.log(msg);
+				console.log(msg);
 			});
 			
             page.set('onResourceReceived', function(resp) {
+				
 				var resp_url = resp.url.replace(/\//g, "");
 				var curr_url = this.current_url.replace(/\//g, "");
 				if(!this.page_content_type && (resp_url == curr_url)) {
@@ -346,7 +349,11 @@ MF_Eddie.prototype.download_image = function(args, cb) {
 };
 
 MF_Eddie.prototype.enter_text = function(args, cb) {
+	console.log('BEFORE SET ARGS:');
+	console.log('--------------------------------');
 	this.set_args(args, function() {
+		console.log('AFTER SET ARGS');
+		console.log('-----------------------------------');
 		this.get_element(function(err, warn, ok) {
 			this.status_code = 200;
 			this.mf_content_type = 'application/json';
@@ -395,6 +402,10 @@ MF_Eddie.prototype.get_element = function(cb) {
 	var selector_type = this.req_args.force_selector_type || get_selector_type(this.req_args.selector);
 	var timeout = this.req_args.timeout || WAIT;
 	var req_args = this.req_args;
+	console.log('GET EL, CHECK REQ ARGS');
+	for(var a in req_args) {
+		console.log(a + ': ' + req_args[a]);
+	}
 	var eval_args = {selector_type: selector_type, req_args: req_args};
 
 	this.page.evaluate(evaluateWithArgs(function(args) {
@@ -460,8 +471,8 @@ MF_Eddie.prototype.get_element = function(cb) {
 					return ["Unknown error while downloading.", false, false];
 				break;
 				case 'enter_text':
-					if(typeof element.attributes.value === 'undefined') {
-						var warning = 'Warnning: ' + args.req_args.selector + ' does not appear to have a value attribute.  Use force =1 to override';
+					if(typeof element.attributes.value === 'undefined' && !args.req_args['force']) {
+						var warning = args.req_args.selector + ' does not appear to have a value attribute.  Use force =1 to override';
 						return [false, warning, false];
 					}
 					element.value = args.req_args['text'];
