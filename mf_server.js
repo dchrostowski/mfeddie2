@@ -62,7 +62,7 @@ function decide_fate(mfeddie, cb) {
 }
 
 function delete_pid_cookie() {
-	return [['Set-Cookie', 'pid=deleted; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'], ['Connection', 'close']];
+	return [['Set-Cookie', 'pid=deleted; path=/mfeddie; expires=Thu, 01 Jan 1970 00:00:00 GMT'], ['Connection', 'close']];
 }
 
 function validate_type (param_name, param_val, cb) {

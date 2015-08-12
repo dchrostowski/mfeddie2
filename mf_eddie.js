@@ -33,48 +33,16 @@ MF_Eddie.prototype.cache_page = function(url, content_type, cb) {
 	return cb();
 }
 
-MF_Eddie.prototype.set_page = function(err, warn, page, cb) {
-	var set_page_fn = function() {
-		if(page) this.page = page;
-		this.responded = true;
-		var req_args = this.req_args;
-		
-		if(err) {
-			this.fatal_error = err;
-			this.status_code = this.status_code || 500;
-			this.mf_content_type = 'application/json';
-			return cb(err);
-		}
-		
-		if(warn) {
-			if(this.timedOut && this.req_args.get_content) {
-				warn = false;
-				this.mf_content_type = this.page_content_type;
-				this.mf_status_code = this.page_status_code || 200;
-			}
-			else {
-				this.mf_content_type = 'application/json';
-				return cb(err, warn, false);
-			}
-		}	
-		if(page) {
-			if(this.req_args.get_content) {
-				return this.get_content(false, function(e,w,c) {
-					return cb(e, w, c);
-				}.bind(this));
-			}
-			else {
-				this.mf_content_type = 'application/json';
-				this.mf_status_code = this.page_status_code || 200;
-				return cb(false, false, "OK.  Visited page.");
+MF_Eddie.prototype.set_page = function(page, cb) {
+	if(page) {
+		this.page = page;
+		var cache_cb = function() {
+			if(cb && typeof cb === 'function') {
+				return cb(false, true);
 			}
 		}
-	}.bind(this);
-	
-	if(!err && !this.responded && page && this.req_args.keep_alive) {
-		this.cache_page(this.req_args.url, this.page_content_type, set_page_fn);
+		return this.cache_page(this.req_args.url, this.page_content_type, cache_cb);
 	}
-	else { set_page_fn(); }
 }
 
 
@@ -133,11 +101,45 @@ MF_Eddie.prototype.cookie = function() {
 
 // Will load a page in browser.
 MF_Eddie.prototype.visit = function(args, cb) {
-	this.responded = false;
 	this.current_action = 'visit';
-	this.timedOut = false;
     this.set_args(args, function() {
+		
+		var set_page_cb = function() {
+			if(this.responded) return;
+			if(this.req_args.get_content) {
+				var get_content_cb = function(content) {
+					this.mf_content_type = this.page_content_type || 'text/html';
+					this.responded = true;
+					return cb(false, false, content);
+				};
+				return this.get_content(false, get_content_cb);
+			}
+			
+			else {
+				this.mf_content_type = 'application/json';
+				return cb(false, this.warnings, 'Visited page.');
+			}
+		}.bind(this);
+		
+		
         this.ph.createPage(function(page) {
+			
+			
+			var visit_timeout_fn = function() {
+				console.log('TIMEOUT EVENT EMITTED');
+				if(this.return_on_timeout) {
+					return this.set_page(page, set_page_cb);
+					this.eventEmitter.removeListener('timeout', visit_timeout_fn);
+				}
+				else {
+					this.mf_status_code = 504;
+					this.fatal_error = 'Gateway Timeout: the page at ' + this.current_url + ' failed to laod on time.  Try setting return_on_timeout = 1';
+					this.eventEmitter.emit('fatal_error');
+					return;
+				}
+			}.bind(this);
+			
+			this.eventEmitter.on('timeout', visit_timeout_fn);
 			page.set('viewportSize', {width:800, height:800});
 			page.set('paperSize', {width: 1024, height: 768, border:'0px' });
             page.set('settings.userAgent', this.user_agent);
@@ -206,32 +208,50 @@ MF_Eddie.prototype.visit = function(args, cb) {
             );
             // If a resource does not load within the timeout, abort all requests and close the browser.
 			page.set('onResourceTimeout', function(request) {
-				if(this.return_on_timeout && this.page_content_type) {
-						console.log('non fatal timeout');
-						this.eventEmitter.emit('non_fatal_timeout');
-						this.status_code = 200;
-						this.mf_content_type = this.page_content_type || 'text/html';
-						this.timedOut = true;
-						return this.set_page(false, 'Page timed out, returning partially loaded content', page, cb);
-				}
-				else {
+				console.log('RESOURCE TIMEOUT CALLED');
+				console.log('what is the request url? ' + request.url);
+				console.log('what is the current url? ' + this.current_url);
+				console.log('what is the content type? ' + this.page_content_type);
+				
+				if(request.url == this.current_url) {
 					this.status_code = 504;
-					this.fatal_error = "Gateway Timeout: timeout occurred before " + request.url + " responded.";
+					this.mf_content_type = 'application/json';
+					this.fatal_error = "Gateway Timeout: " + request.url + " did not load in load in time.";
 					this.eventEmitter.emit('fatal_error');
-					return;
 				}
+				else if (!this.return_on_timeout) {
+					this.status_code = 504;
+					this.fatal_error = 'Resource Timeout: ' + request.url + ' failed to load in time while fetching ' + this.current_url;
+					this.eventEmitter.emit('fatal_error');
+				}
+				
+				else if(!this.page_content_type) {
+					this.status_code = 504;
+					this.fatal_error = "Gateway Timeout: timeout ocurred before the server at " + this.current_url + " returned a content type.";
+				}
+				
+				else {
+					this.warnings = this.warnings + 'Resource at ' + request.url + ' timed out. ';
+				}
+				
 			}.bind(this));
 			
 			page.set('onNavigationRequested', function(url, type, willNavigate, main) {
 				if(main) {
 					this.current_url = url;
 					this.page_content_type = false;
+					this.responded = false;
+					this.timedOut = false;
+					this.warnings = false;
+					setTimeout(function() {
+						this.eventEmitter.emit('timeout');
+						this.timedOut = true;
+					}.bind(this), this.visit_timeout);
 				}
 				
 			}.bind(this));
             
             page.set('onConsoleMessage', function(msg) {
-				console.log(msg);
 			});
 			
             page.set('onResourceReceived', function(resp) {
@@ -239,31 +259,29 @@ MF_Eddie.prototype.visit = function(args, cb) {
 				var resp_url = resp.url.replace(/\//g, "");
 				var curr_url = this.current_url.replace(/\//g, "");
 				if(!this.page_content_type && (resp_url == curr_url)) {
-					this.page_content_type = resp.contentType;
-					this.status_code = resp.status;
-					return;
+					
                     if(resp.redirectURL) {
 						this.current_url = resp.redirectURL;
+						console.log('change current url to redirect url, set content false');
 						this.page_content_type = false;
 					}
 					else {
+						console.log('SET PAGE CONTENT TYPE TO ' + resp.contentType);
 						this.page_content_type = resp.contentType;
 						this.status_code = resp.status;
 					}
 				}                
             }.bind(this));
             
-            
-            this.timedOut = false;
-            this.page_content_type = false;
             page.open(this.req_args.url, function(status) {
                 if(status != 'success') {
-					this.fatal_error = "Unknown error ocurred while opening page at " + this.req_args.url;
+					this.fatal_error = this.fatal_error || "Unknown error ocurred while opening page at " + this.req_args.url;
 					this.mf_status_code = this.mf_status_code || 500;
 					this.eventEmitter.emit('fatal_error');
 					return;
 				}
-                return this.set_page(false, false, page, cb);
+				
+				return this.set_page(page, set_page_cb);
             }.bind(this));
         }.bind(this));
     }.bind(this));
@@ -367,7 +385,7 @@ MF_Eddie.prototype.follow_link = function(args, cb) {
 		return this.get_element(function(err, warn, new_link) {
 			
 			if(err||warn) return cb(err, warn);
-			
+			this.current_url = new_link;
 			this.eventEmitter.on('non_fatal_timeout', function() {
 				this.status_code = 200;
 				this.mf_content_type = 'application/json';
