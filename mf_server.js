@@ -170,18 +170,39 @@ function parse_query_args(args, cb) {
 			mfeddie.eventEmitter.removeAllListeners();
 		}
 		return decide_fate(mfeddie, function(alive, dead) {
-			var status_code, content_type, content, status, cookie, mf_resp;
+			var status_code, content_type, content, status, message, cookie, warnings;
 			if(alive) cookie = mfeddie.cookie();
 			if(dead) cookie = delete_pid_cookie();
 			console.log(cookie);
 			status_code = mfeddie.status_code;
-			content_type = mfeddie.mf_content_type || mfeddie.page_content_type
-			if(mfeddie.mf_content_type && content_type === 'application/json') {
-				var message;
-				if(err) {status = 'Error'; message = err;}
-				if(warn) {status = 'Warning'; message = warn;}
-				if(ok) {status = 'OK'; message = ok;}
-				content = JSON.stringify({status: status, message: message});
+			var mf_content_type = mfeddie.mf_content_type || false;
+			var page_content_type = mfeddie.page_content_type || 'text/html';
+			warnings = mfeddie.warnings;
+			
+			if(mf_content_type == 'application/json') {
+				if(err) {
+					status = 'Error'; 
+					message = err;
+				}
+				if(warn) {
+					status = 'Warning';
+					if(warnings.length == 1) {
+						message = warnings[0];
+					}
+					else if(warnings.length > 1) {
+						message = "Multiple warnings on request.";
+					}
+					else {
+						warn = false;
+					}
+				}
+				if(ok) {
+					status = 'OK'; 
+					message = ok;
+				}
+				content = {status:status, message:message};
+				if(warnings.length > 1) content['warnings'] = warnings;
+				content = JSON.stringify(content);
 			}
 			else {
 				content = ok;
@@ -198,8 +219,7 @@ function parse_query_args(args, cb) {
 			return cb(err, 'application/json', delete_pid_cookie(), 400);
 		}
 		mfeddie.fatal_error = false;
-        delete validated_args['proxy'];
-        delete validated_args['user_agent'];
+		mfeddie.warnings = new Array();
         
         var fn = validated_args.action;
         mfeddie.eventEmitter.on('fatal_error', function() {

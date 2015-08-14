@@ -76,6 +76,8 @@
       "url":"string",
       "keep_alive":"int",
       "timeout":"int",
+      "page_timeout":"int",
+      "resource_timeout":"int",
       "force":"int",
       "force_selector_type":"string",
       "get_content":"int",
@@ -88,6 +90,21 @@
       "allowed":"json",
       "disallowed":"json"
    },
+   
+   "permanent_args": [
+		"return_on_timeout",
+		"load_external",
+		"load_images",
+		"load_css",
+		"require_proxy",
+		"proxy",
+		"allowed",
+		"disallowed",
+		"page_timeout",
+		"resource_timeout",
+		"user_agent"
+   ],
+   
    "action_optional_defaults":{
       "back":{
          "keep_alive":1,
@@ -133,7 +150,6 @@
           "keep_alive":1
       },
       "visit":{
-         "timeout":2500,
          "get_content":0,
          "return_on_timeout":1,
          "load_external":1,
@@ -144,7 +160,9 @@
          "proxy":"",
          "allowed":"[]",
          "disallowed":"[]",
-         "keep_alive":0
+         "keep_alive":0,
+         "page_timeout":10000,
+         "resource_timeout":5000
       }
    }
 }

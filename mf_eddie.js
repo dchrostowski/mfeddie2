@@ -33,12 +33,14 @@ MF_Eddie.prototype.cache_page = function(url, content_type, cb) {
 	return cb();
 }
 
-MF_Eddie.prototype.set_page = function(page, cb) {
+MF_Eddie.prototype.set_page = function(err, page, cb) {
+	var ok = false;
 	if(page) {
+		ok = true;
 		this.page = page;
 		var cache_cb = function() {
 			if(cb && typeof cb === 'function') {
-				return cb(false, true);
+				return cb(err, ok);
 			}
 		}
 		return this.cache_page(this.req_args.url, this.page_content_type, cache_cb);
@@ -53,29 +55,34 @@ function MF_Eddie(args, cb, mf_instances) {
     var phantom_cb = function() {
         return mf_instances.push_instance(this, push_instance_cb);
     }.bind(this);
+    
+    this.warnings = new Array();
 	this.history_queue = [];
 	this.history_queue_pos = -1;
     this.mf_content_type = false;
     this.fatal_error = false;
     this.eventEmitter = new events.EventEmitter();
-    this.visit_timeout = args.timeout;
-    this.allowed = args.allowed;
-    this.disallowed = args.disallowed;
-    this.load_external = args.load_external;
-    this.load_images = args.load_images;
-    this.load_css = args.load_css;
-    this.return_on_timeout = args.return_on_timeout;
-    var parameters_arg = (args.require_proxy !== 'undefined') ? {paramaters: {proxy: args.proxy}} : false;
-    if(args.require_proxy) {
-        return phantom.create({parameters: {proxy: args.proxy}}, function(ph) {
-            this.user_agent = args.user_agent;
-            this.proxy = args.proxy;
+    
+    var permanent_args = config.get('permanent_args');
+    
+    this.settings = {};
+    for(var i in permanent_args) {
+		var arg_name = permanent_args[i];
+		this.settings[arg_name] = args[arg_name];
+		delete args[arg_name];
+	}
+    /*
+     */
+    
+    
+    var parameters_arg = (this.settings.require_proxy !== 'undefined') ? {paramaters: {proxy: this.settings.proxy}} : false;
+    if(this.settings.require_proxy) {
+        return phantom.create({parameters: {proxy: this.settings.proxy}}, function(ph) {
             return this.set_phantom(ph, phantom_cb);
         }.bind(this));
     }
     else {
        return phantom.create(function(ph) {
-            this.user_agent = args.user_agent;
             return this.set_phantom(ph, phantom_cb);
         }.bind(this));
     }
@@ -86,11 +93,18 @@ function base_url(url) {
 
 MF_Eddie.prototype.set_args = function(args, cb) {
     this.req_args = {};
+    if(args['action'] == 'visit') {
+		console.log('CHECK ARGS ON VISIT');
+		console.log('--------------------');
+	}
+    
+    
     for (var a in args) {
-		if(args['action'] == 'enter_text')
+		if(args['action'] == 'visit')
 		console.log(a + ': ' + args[a]);
         this.req_args[a] = args[a];
     }
+    console.log('---------------------');
     cb();
 }
 
@@ -104,11 +118,27 @@ MF_Eddie.prototype.visit = function(args, cb) {
 	this.current_action = 'visit';
     this.set_args(args, function() {
 		
-		var set_page_cb = function() {
+		var set_page_cb = function(err, ok) {
 			if(this.responded) return;
-			if(this.req_args.get_content) {
+			if(err) return cb(err);
+			
+			var warn = false;
+			
+			if (this.warnings.length > 0) {
+				console.log('warnings length > 0');
+				warn = true;
+				ok = false;
+			}
+			
+			if(ok && !err && !warn) {
+				console.log('set ok to successfully visited page');
+				ok = 'Successfully visited page.';
+			}
+			
+			if(this.req_args.get_content && !err) {
 				var get_content_cb = function(content) {
-					this.mf_content_type = this.page_content_type || 'text/html';
+					this.page_content_type = this.page_content_type || 'text/html';
+					this.mf_content_type = false;
 					this.responded = true;
 					return cb(false, false, content);
 				};
@@ -117,7 +147,10 @@ MF_Eddie.prototype.visit = function(args, cb) {
 			
 			else {
 				this.mf_content_type = 'application/json';
-				return cb(false, this.warnings, 'Visited page.');
+				this.responded = true;
+				console.log('set page cb returning here with: ');
+				console.log(err + ' ' + warn + ' ' + ok);
+				return cb(err, warn, ok);
 			}
 		}.bind(this);
 		
@@ -125,25 +158,25 @@ MF_Eddie.prototype.visit = function(args, cb) {
         this.ph.createPage(function(page) {
 			
 			
-			var visit_timeout_fn = function() {
+			var page_timeout_fn = function() {
 				console.log('TIMEOUT EVENT EMITTED');
-				if(this.return_on_timeout) {
-					return this.set_page(page, set_page_cb);
-					this.eventEmitter.removeListener('timeout', visit_timeout_fn);
+				if(this.settings.return_on_timeout && this.page_content_type) {
+					this.eventEmitter.removeListener('page_timeout', page_timeout_fn);
+					this.warnings.push('Page failed to fully load prior to page timeout.');
+					return this.set_page(false, page, set_page_cb);
 				}
 				else {
-					this.mf_status_code = 504;
-					this.fatal_error = 'Gateway Timeout: the page at ' + this.current_url + ' failed to laod on time.  Try setting return_on_timeout = 1';
+					this.status_code = 504;
+					this.fatal_error = 'Gateway Timeout: The page at ' + this.current_url + ' failed to load within the time specified (' + this.page_timeout + ' ms)';
 					this.eventEmitter.emit('fatal_error');
-					return;
 				}
 			}.bind(this);
 			
-			this.eventEmitter.on('timeout', visit_timeout_fn);
+			this.eventEmitter.on('page_timeout', page_timeout_fn);
 			page.set('viewportSize', {width:800, height:800});
 			page.set('paperSize', {width: 1024, height: 768, border:'0px' });
-            page.set('settings.userAgent', this.user_agent);
-            page.set('settings.resourceTimeout', this.visit_timeout);
+            page.set('settings.userAgent', this.settings.user_agent);
+            page.set('settings.resourceTimeout', this.settings.resource_timeout);
             
             
             page.set('onLoadStarted', function() {
@@ -162,11 +195,11 @@ MF_Eddie.prototype.visit = function(args, cb) {
             var request_filter_args = {
                 base_url: base,
                 hostname: hostname,
-                load_external: this.load_external,
-                load_images: this.load_images,
-                load_css: this.load_css,
-                allowed: this.allowed,
-                disallowed: this.disallowed
+                load_external: this.settings.load_external,
+                load_images: this.settings.load_images,
+                load_css: this.settings.load_css,
+                allowed: this.settings.allowed,
+                disallowed: this.settings.disallowed
             };
             // Will determine whether or not to abort a given request
             page.onResourceRequested(
@@ -213,25 +246,19 @@ MF_Eddie.prototype.visit = function(args, cb) {
 				console.log('what is the current url? ' + this.current_url);
 				console.log('what is the content type? ' + this.page_content_type);
 				
-				if(request.url == this.current_url) {
+				if(request.url == this.current_url || !this.page_content_type) {
 					this.status_code = 504;
-					this.mf_content_type = 'application/json';
-					this.fatal_error = "Gateway Timeout: " + request.url + " did not load in load in time.";
+					this.fatal_error = "Resource/Gateway Timeout: " + request.url + " did not load in time.";
 					this.eventEmitter.emit('fatal_error');
 				}
-				else if (!this.return_on_timeout) {
-					this.status_code = 504;
+				else if (!this.settings.return_on_timeout) {
 					this.fatal_error = 'Resource Timeout: ' + request.url + ' failed to load in time while fetching ' + this.current_url;
 					this.eventEmitter.emit('fatal_error');
 				}
 				
-				else if(!this.page_content_type) {
-					this.status_code = 504;
-					this.fatal_error = "Gateway Timeout: timeout ocurred before the server at " + this.current_url + " returned a content type.";
-				}
-				
 				else {
-					this.warnings = this.warnings + 'Resource at ' + request.url + ' timed out. ';
+					console.log('push warning of resource timeout');
+					this.warnings.push('Resource Timeout: ' + request.url + ' timed out while loading page.');
 				}
 				
 			}.bind(this));
@@ -242,11 +269,11 @@ MF_Eddie.prototype.visit = function(args, cb) {
 					this.page_content_type = false;
 					this.responded = false;
 					this.timedOut = false;
-					this.warnings = false;
+					this.warnings = new Array();
 					setTimeout(function() {
-						this.eventEmitter.emit('timeout');
+						this.eventEmitter.emit('page_timeout');
 						this.timedOut = true;
-					}.bind(this), this.visit_timeout);
+					}.bind(this), this.settings.page_timeout);
 				}
 				
 			}.bind(this));
@@ -276,12 +303,11 @@ MF_Eddie.prototype.visit = function(args, cb) {
             page.open(this.req_args.url, function(status) {
                 if(status != 'success') {
 					this.fatal_error = this.fatal_error || "Unknown error ocurred while opening page at " + this.req_args.url;
-					this.mf_status_code = this.mf_status_code || 500;
+					this.status_code = this.status_code || 500;
 					this.eventEmitter.emit('fatal_error');
 					return;
 				}
-				
-				return this.set_page(page, set_page_cb);
+				return this.set_page(false, page, set_page_cb);
             }.bind(this));
         }.bind(this));
     }.bind(this));
@@ -293,15 +319,14 @@ MF_Eddie.prototype.back = function(args, cb) {
 			return cb(false, "Can't go back, there are no previously loaded pages.\n");
 		}
 		this.history_queue_pos--;
-		var cached = this.history_queue[this.history_queue_pos];
-		this.eventEmitter.on('non_fatal_timeout', function() {
-			this.status_code = 200;
-			this.mf_content_type = 'application/json';
-			return cb(false, "A timeout ocurred (possibly on the previous request).  Will continue to attempt to go back to " + cached.url);
-		}.bind(this));
+		
 		this.page.goBack();
 		var ret_fn = function() {
+			var cached = this.history_queue[this.history_queue_pos];
 			this.page_content_type = cached.content_type;
+			var warn = (this.warnings.length > 0);
+			var ok = (warn) ? false : "Went back to " + cached.url;
+			return cb(false, warn, ok);
 			return cb(false, false, "Went back to " + cached.url);
 		}.bind(this);
 		return setTimeout(ret_fn, this.req_args.timeout);
@@ -319,7 +344,9 @@ MF_Eddie.prototype.forward = function(args, cb) {
 		var ret_fn = function() {
 			var cached = this.history_queue[this.history_queue_pos];
 			this.page_content_type = cached.content_type;
-			return cb(false, false, "Went forward to " + cached.url);
+			var warn = (this.warnings.length > 0);
+			var ok = (warn) ? false : "Went forward to " + cached.url;
+			return cb(false, warn, ok);
 		}.bind(this);
 		return setTimeout(ret_fn, this.req_args.timeout);
 		
@@ -357,7 +384,6 @@ MF_Eddie.prototype.download_image = function(args, cb) {
 			this.page.set('clipRect', clipRect);
 			this.page.render(this.req_args['dl_file_loc']);
 			return setTimeout(function() {
-				this.status_code = 200;
 				this.mf_content_type = 'application/json';
 				var success = 'Downloaded image to ' + this.req_args['dl_file_loc'];
 				return cb(false, false, success);
@@ -383,22 +409,25 @@ MF_Eddie.prototype.enter_text = function(args, cb) {
 MF_Eddie.prototype.follow_link = function(args, cb) {
 	this.set_args(args, function() {
 		return this.get_element(function(err, warn, new_link) {
-			
 			if(err||warn) return cb(err, warn);
-			this.current_url = new_link;
-			this.eventEmitter.on('non_fatal_timeout', function() {
-				this.status_code = 200;
-				this.mf_content_type = 'application/json';
-				return cb(false, "A timeout ocurred (possibly on the previous request).  Will continue to attempt to follow link to " + new_link);
-			});
+			
+			
 			this.page.evaluate(evaluateWithArgs(function(link) {
-				location.href=link;
+				try {
+					location.href=link;
+				}
+				catch(err) {
+					return [err, false];
+				}
+				return [false, true];
 			}, new_link), function(res) {
-				this.status_code = 200;
 				this.mf_content_type = 'application/json';
+				if(res[0]) return cb(res[0]);
 				return setTimeout(function() {
 					return this.cache_page(new_link, this.page_content_type, function() {
-						return cb(false, false, "Followed link to " + new_link + '.  Page content-type is ' + this.page_content_type);
+						var warn = (this.warnings.length > 0);
+						var ok = (warn) ? false : "Followed link to " + new_link + '.  Page content-type is ' + this.page_content_type;
+						return cb(false, warn, ok);
 					}.bind(this));
 				}.bind(this),this.req_args.timeout);
 

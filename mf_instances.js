@@ -47,8 +47,8 @@ function start(self) {
             }
         }
         if(count > 0) {
-            mf_log.log('There are ' + count + ' instances running with these PIDs:');
-            mf_log.log(key_string );
+            console.log('There are ' + count + ' instances running with these PIDs:');
+            console.log(key_string );
         }
     }, STATUS_INTERVAL);
 }
