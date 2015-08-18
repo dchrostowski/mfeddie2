@@ -1,183 +1,178 @@
 {
-   "__comment":"Default",
-   "port":8314,
-   "default_domain":{
-      "fqdn":"dev5.bur.sol",
-      "ssl":false
-   },
-   "timeout":"5000",
-   "wait":"800",
-   "max_instances":"16",
-   "status_interval":"5000",
-   "process_timeout_seconds":"120",
-   "log_file":"development.log",
-   "jquery_lib":"./js/jquery-1.11.3.min.js",
-   "jquery_lib_external": "http://code.jquery.com/jquery-2.1.4.min.js",
-   "dl_file_loc":"./downloads/downloaded_file",
-   "actions":[
-      "back",
-      "click",
-      "download_image",
-      "enter_text",
-      "follow_link",
-      "forward",
-      "get_content",
-      "kill",
-      "render_page",
-      "visit",
-      "wait"
-   ],
-   "action_required":{
-      "back":[
-        "pid"
-      ],
-      "click":[
-         "selector",
-         "pid"
-      ],
-      "download_image":[
-         "selector",
-         "dl_file_loc",
-         "pid"
-      ],
-      "enter_text":[
-         "selector",
-         "text",
-         "pid"
-      ],
-      "forward":[
-        "pid"
-      ],
-      "kill":[
-        "pid"
-       ],
-      "follow_link":[
-         "selector",
-         "pid"
-      ],
-      "get_content":[
-		"pid"
-      ],
-      "render_page":[
-          "dl_file_loc",
-          "pid"
-      ],
-      "visit":[
-         "user_agent",
-         "url"
-      ],
-      "wait":[
-		"pid"
-      ]
-   },
-   "param_type_reqs":{
-      "action":"string",
-      "selector":"string",
-      "dl_file_loc":"string",
-      "pid":"int",
-      "text":"string",
-      "user_agent":"string",
-      "url":"string",
-      "keep_alive":"int",
-      "timeout":"int",
-      "page_timeout":"int",
-      "resource_timeout":"int",
-      "force":"int",
-      "force_selector_type":"string",
-      "get_content":"int",
-      "return_on_timeout":"int",
-      "load_external":"int",
-      "load_images":"int",
-      "load_css":"int",
-      "require_proxy":"int",
-      "suppress_warn":"int",
-      "proxy":"string",
-      "allowed":"json",
-      "disallowed":"json"
-   },
-   
-   "permanent_args": [
-		"return_on_timeout",
-		"load_external",
-		"load_images",
-		"load_css",
-		"require_proxy",
-		"proxy",
-		"allowed",
-		"disallowed",
-		"page_timeout",
-		"resource_timeout",
-		"user_agent",
-		"suppress_warn"
-   ],
-   
-   "action_optional_defaults":{
-      "back":{
-         "keep_alive":1,
-         "timeout": 2000
-      },
-      "click":{
-         "timeout":800,
-         "force":0,
-         "force_selector_type":"",
-         "keep_alive":1
-      },
-      "download_image":{
-         "timeout":2000,
-         "force":0,
-         "force_selector_type":"",
-         "keep_alive":1
-      },
-      "enter_text":{
-         "timeout":400,
-         "force":0,
-         "force_selector_type":"",
-         "keep_alive":1
-      },
-      "follow_link":{
-         "timeout":"2000",
-         "force":0,
-         "force_selector_type":"",
-         "keep_alive":1
-      },
-      "get_content":{
-         "timeout":800,
-         "keep_alive":0
-      },
-      "forward":{
-         "keep_alive":1,
-         "timeout": 2000
-      },
-      "kill":{
-		"keep_alive":0
-      },
-      "render_page":{
-          "timeout":2000,
-          "keep_alive":1
-      },
-      "visit":{
-         "get_content":0,
-         "return_on_timeout":1,
-         "load_external":1,
-         "load_images":1,
-         "load_css":1,
-         "pid":0,
-         "require_proxy":1,
-         "proxy":"",
-         "allowed":"[]",
-         "disallowed":"[]",
-         "keep_alive":0,
-         "page_timeout":10000,
-         "resource_timeout":5000,
-         "suppress_warn":0
-      },
-      "wait":{
-		"timeout":3000,
-		"keep_alive":1
-      }
-   },
-   
-   "key_map": {
+    "__comment": "Default",
+    "port": 8314,
+    "timeout": "5000",
+    "wait": "800",
+    "max_instances": "16",
+    "status_interval": "5000",
+    "process_timeout_seconds": "120",
+    "log_file": "development.log",
+    "log_std_out": true,
+    "log_date": false,
+    "actions": [
+        "back",
+        "click",
+        "download_image",
+        "enter_text",
+        "follow_link",
+        "forward",
+        "get_content",
+        "kill",
+        "render_page",
+        "visit",
+        "wait"
+    ],
+    "action_required": {
+        "back": [
+            "pid"
+        ],
+        "click": [
+            "selector",
+            "pid"
+        ],
+        "download_image": [
+            "selector",
+            "dl_file_loc",
+            "pid"
+        ],
+        "enter_text": [
+            "selector",
+            "text",
+            "pid"
+        ],
+        "forward": [
+            "pid"
+        ],
+        "kill": [
+            "pid"
+        ],
+        "follow_link": [
+            "selector",
+            "pid"
+        ],
+        "get_content": [
+            "pid"
+        ],
+        "render_page": [
+            "dl_file_loc",
+            "pid"
+        ],
+        "visit": [
+            "user_agent",
+            "url"
+        ],
+        "wait": [
+            "pid"
+        ]
+    },
+    "param_type_reqs": {
+        "action": "string",
+        "selector": "string",
+        "dl_file_loc": "string",
+        "pid": "int",
+        "text": "string",
+        "user_agent": "string",
+        "url": "string",
+        "keep_alive": "int",
+        "timeout": "int",
+        "page_timeout": "int",
+        "resource_timeout": "int",
+        "force": "int",
+        "force_selector_type": "string",
+        "get_content": "int",
+        "return_on_timeout": "int",
+        "load_external": "int",
+        "load_images": "int",
+        "load_css": "int",
+        "require_proxy": "int",
+        "suppress_warn": "int",
+        "proxy": "string",
+        "allowed": "json",
+        "disallowed": "json"
+    },
+
+    "permanent_args": [
+        "return_on_timeout",
+        "load_external",
+        "load_images",
+        "load_css",
+        "require_proxy",
+        "proxy",
+        "allowed",
+        "disallowed",
+        "page_timeout",
+        "resource_timeout",
+        "user_agent",
+        "suppress_warn"
+    ],
+
+    "action_optional_defaults": {
+        "back": {
+            "keep_alive": 1,
+            "timeout": 2000
+        },
+        "click": {
+            "timeout": 800,
+            "force": 0,
+            "force_selector_type": "",
+            "keep_alive": 1
+        },
+        "download_image": {
+            "timeout": 2000,
+            "force": 0,
+            "force_selector_type": "",
+            "keep_alive": 1
+        },
+        "enter_text": {
+            "timeout": 400,
+            "force": 0,
+            "force_selector_type": "",
+            "keep_alive": 1
+        },
+        "follow_link": {
+            "timeout": "2000",
+            "force": 0,
+            "force_selector_type": "",
+            "keep_alive": 1
+        },
+        "get_content": {
+            "timeout": 800,
+            "keep_alive": 0
+        },
+        "forward": {
+            "keep_alive": 1,
+            "timeout": 2000
+        },
+        "kill": {
+            "keep_alive": 0
+        },
+        "render_page": {
+            "timeout": 2000,
+            "keep_alive": 1
+        },
+        "visit": {
+            "get_content": 0,
+            "return_on_timeout": 1,
+            "load_external": 1,
+            "load_images": 1,
+            "load_css": 1,
+            "pid": 0,
+            "require_proxy": 1,
+            "proxy": "",
+            "allowed": "[]",
+            "disallowed": "[]",
+            "keep_alive": 0,
+            "page_timeout": 10000,
+            "resource_timeout": 5000,
+            "suppress_warn": 0
+        },
+        "wait": {
+            "timeout": 3000,
+            "keep_alive": 1
+        }
+    },
+
+    "key_map": {
         "0": 48,
         "1": 49,
         "2": 50,
