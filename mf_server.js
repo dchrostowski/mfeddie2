@@ -117,7 +117,11 @@ function validate_actions_and_parameters(request_args, cb) {
             break;
         }
     }
-    if (!valid_action) return cb("Invalid action: '" + action + "'");
+    if (!valid_action) {
+		console.log("INVALID ACTION");
+		return cb("Invalid action: '" + action + "'");
+		
+	}
     var validated = {
         "action" : action,
     };
@@ -177,6 +181,7 @@ function parse_query_args(args, cb) {
 			status_code = mfeddie.status_code;
 			var mf_content_type = mfeddie.mf_content_type || false;
 			var page_content_type = mfeddie.page_content_type || 'text/html';
+			content_type = mf_content_type || page_content_type;
 			warnings = mfeddie.warnings;
 			
 			if(mf_content_type == 'application/json') {
@@ -186,22 +191,16 @@ function parse_query_args(args, cb) {
 				}
 				if(warn) {
 					status = 'Warning';
-					if(warnings.length == 1) {
-						message = warnings[0];
-					}
-					else if(warnings.length > 1) {
-						message = "Multiple warnings on request.";
-					}
-					else {
-						warn = false;
-					}
+					message = warn;
 				}
 				if(ok) {
 					status = 'OK'; 
 					message = ok;
 				}
+				
 				content = {status:status, message:message};
-				if(warnings.length > 1) content['warnings'] = warnings;
+				console.log('CHECK SUPPRESS_WARN: ' + mfeddie.settings.suppress_warn);
+				if(warnings.length > 0 && !mfeddie.settings.suppress_warn) content['warnings'] = warnings;
 				content = JSON.stringify(content);
 			}
 			else {
@@ -231,11 +230,12 @@ function parse_query_args(args, cb) {
         mfeddie[fn](validated_args, action_callback);
     };
 
-    var validate_cb = function(err, v_args) {
+    var validate_cb = function(v_err, v_args) {
         validated_args = v_args;
         
-        if(err) {
-			return cb(err, 'application/json', null, 500);
+        if(v_err) {
+			v_err = JSON.stringify({status:'Error',message:v_err});
+			return cb(v_err, 'application/json', null, 500);
 		}
         var process_id = validated_args.pid;
         var action = validated_args.action;
@@ -321,7 +321,17 @@ var server = http.createServer(function(req, res) {
 
     // This function will be called back from this.parse_query_args()
     var response_callback = function (data, content_type, cookies, status_code) {
+		console.log('RESPONSE CALLBACK CHECK STATUS CODE');
+		console.log(status_code);
+		if(status_code == 500) {
+			console.log('response callback, status = 500 check content and ct');
+			console.log(data);
+			console.log(content_type);
+		}
 		if(!status_code) status_code = 200;
+		if(status_code >299 && status_code < 400) {
+			status_code = 200;
+		}
 		var current_time = (new Date).getTime()/1000;
 		var time_elapsed = current_time - last_resp;
 		if(time_elapsed < 2) console.log("response callback high rate");

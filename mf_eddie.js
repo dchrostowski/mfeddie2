@@ -10,7 +10,6 @@ var phantom = require('phantom');
 var URL = require('url');
 var mf_log = require('./mf_log');
 var events = require('events');
-var TIMEOUT = config.get('timeout') || 2500;
 var WAIT = config.get('wait') || 800;
 
 MF_Eddie.prototype.get_phantom_pid = function() {
@@ -56,7 +55,7 @@ function MF_Eddie(args, cb, mf_instances) {
         return mf_instances.push_instance(this, push_instance_cb);
     }.bind(this);
     
-    this.warnings = new Array();
+    this.warnings = [];
 	this.history_queue = [];
 	this.history_queue_pos = -1;
     this.mf_content_type = false;
@@ -67,7 +66,9 @@ function MF_Eddie(args, cb, mf_instances) {
     
     this.settings = {};
     for(var i in permanent_args) {
+		
 		var arg_name = permanent_args[i];
+		console.log(arg_name + ': ' + args[arg_name]);
 		this.settings[arg_name] = args[arg_name];
 		delete args[arg_name];
 	}
@@ -93,7 +94,7 @@ function base_url(url) {
 
 MF_Eddie.prototype.set_args = function(args, cb) {
     this.req_args = {};
-    if(args['action'] == 'visit') {
+    if(args['action'] == 'wait') {
 		console.log('CHECK ARGS ON VISIT');
 		console.log('--------------------');
 	}
@@ -122,35 +123,30 @@ MF_Eddie.prototype.visit = function(args, cb) {
 			if(this.responded) return;
 			if(err) return cb(err);
 			
-			var warn = false;
-			
-			if (this.warnings.length > 0) {
-				console.log('warnings length > 0');
-				warn = true;
-				ok = false;
-			}
-			
-			if(ok && !err && !warn) {
-				console.log('set ok to successfully visited page');
+			if(ok) {
 				ok = 'Successfully visited page.';
 			}
 			
 			if(this.req_args.get_content && !err) {
-				var get_content_cb = function(content) {
+				var get_content_cb = function(err, warn, content) {
+					if(err||warn) {
+						this.fatal_error = err||warn;
+						this.eventEmitter.emit('fatal_error');
+						return;
+					}
 					this.page_content_type = this.page_content_type || 'text/html';
 					this.mf_content_type = false;
 					this.responded = true;
+					console.log('return content here');
 					return cb(false, false, content);
-				};
+				}.bind(this);
 				return this.get_content(false, get_content_cb);
 			}
 			
 			else {
 				this.mf_content_type = 'application/json';
 				this.responded = true;
-				console.log('set page cb returning here with: ');
-				console.log(err + ' ' + warn + ' ' + ok);
-				return cb(err, warn, ok);
+				return cb(err, false, ok);
 			}
 		}.bind(this);
 		
@@ -167,7 +163,7 @@ MF_Eddie.prototype.visit = function(args, cb) {
 				}
 				else {
 					this.status_code = 504;
-					this.fatal_error = 'Gateway Timeout: The page at ' + this.current_url + ' failed to load within the time specified (' + this.page_timeout + ' ms)';
+					this.fatal_error = 'Gateway Timeout: The page at ' + this.current_url + ' failed to load within the time specified (' + this.settings.page_timeout + ' ms)';
 					this.eventEmitter.emit('fatal_error');
 				}
 			}.bind(this);
@@ -250,10 +246,12 @@ MF_Eddie.prototype.visit = function(args, cb) {
 					this.status_code = 504;
 					this.fatal_error = "Resource/Gateway Timeout: " + request.url + " did not load in time.";
 					this.eventEmitter.emit('fatal_error');
+					return;
 				}
 				else if (!this.settings.return_on_timeout) {
 					this.fatal_error = 'Resource Timeout: ' + request.url + ' failed to load in time while fetching ' + this.current_url;
 					this.eventEmitter.emit('fatal_error');
+					return;
 				}
 				
 				else {
@@ -269,7 +267,7 @@ MF_Eddie.prototype.visit = function(args, cb) {
 					this.page_content_type = false;
 					this.responded = false;
 					this.timedOut = false;
-					this.warnings = new Array();
+					this.warnings = [];
 					setTimeout(function() {
 						this.eventEmitter.emit('page_timeout');
 						this.timedOut = true;
@@ -279,6 +277,7 @@ MF_Eddie.prototype.visit = function(args, cb) {
 			}.bind(this));
             
             page.set('onConsoleMessage', function(msg) {
+				console.log(msg);
 			});
 			
             page.set('onResourceReceived', function(resp) {
@@ -294,6 +293,7 @@ MF_Eddie.prototype.visit = function(args, cb) {
 					}
 					else {
 						console.log('SET PAGE CONTENT TYPE TO ' + resp.contentType);
+						console.log('SET STATUS CODE TO ' + resp.status);
 						this.page_content_type = resp.contentType;
 						this.status_code = resp.status;
 					}
@@ -307,11 +307,21 @@ MF_Eddie.prototype.visit = function(args, cb) {
 					this.eventEmitter.emit('fatal_error');
 					return;
 				}
+				console.log('mfeddie opened page');
 				return this.set_page(false, page, set_page_cb);
             }.bind(this));
         }.bind(this));
     }.bind(this));
 };
+
+MF_Eddie.prototype.wait = function(args, cb) {
+	this.set_args(args, function() {
+		return setTimeout(function() {
+			this.mf_content_type = 'application/json';
+			return cb(false, false, 'Waited for ' + this.req_args.timeout + ' ms');
+		}.bind(this), this.req_args.timeout);
+	}.bind(this));
+}
 
 MF_Eddie.prototype.back = function(args, cb) {
 	this.set_args(args, function() {
@@ -336,7 +346,10 @@ MF_Eddie.prototype.back = function(args, cb) {
 
 MF_Eddie.prototype.forward = function(args, cb) {
 	this.set_args(args, function() {
-		if(this.history_queue_pos >= this.history_queue.length-1) {
+		var last_pos = this.history_queue.length-1;
+		console.log('last pos is ' + last_pos);
+		console.log('current pos is ' + this.history_queue_pos);
+		if(this.history_queue_pos >= last_pos) {
 			return cb(false, "Can't go forward, there are no previously loaded pages.\n");
 		}
 		this.history_queue_pos++;
@@ -370,8 +383,13 @@ MF_Eddie.prototype.click = function(args, cb) {
 	this.set_args(args, function() {
 		return this.get_element(function(err, warn, ok) {
 			this.mf_content_type = 'application/json';
-			this.mf_status_code = 200;
-			return setTimeout(function() {cb(err, warn, ok);}, this.req_args.timeout);
+			console.log('CLICK GET ELEMENT CALLBACK');
+			console.log('err: ' + err);
+			console.log('warn: ' + warn);
+			console.log('ok : ' + ok);
+			
+			console.log('TIMEOUT: ' + this.req_args.timeout);
+			return setTimeout(function() {return cb(err, warn, ok);}, this.req_args.timeout);
 		}.bind(this));
 	}.bind(this));
 };
@@ -392,17 +410,81 @@ MF_Eddie.prototype.download_image = function(args, cb) {
 	}.bind(this));
 };
 
+
+
+function convert_special_character(char) {
+	
+	switch(char) {
+		case ' ':
+			char = 'Space'
+			break;
+		default:
+		char=null;
+	}
+	return char;
+}
+
+function keypress_event_args(string) {
+	var args = [];
+	var key_map = config.get('key_map');
+	var string_arr = string.split('');
+	for(var i=0; i<string_arr.length; i++) {
+		var char = string_arr[i];
+		if(char == '\\' && string_arr[i+1] == 'n') {
+			char = key_map['Enter'];
+			i++;
+		}
+		
+		
+		
+		var arg = ['keypress', char, null, null];
+		args.push(arg);
+	}
+	return args;
+}
+
+function get_random_time(min, max) {
+	return Math.floor(Math.random() * (max-min+1)) + min;
+}
+
+
+
 MF_Eddie.prototype.enter_text = function(args, cb) {
-	console.log('BEFORE SET ARGS:');
-	console.log('--------------------------------');
 	this.set_args(args, function() {
-		console.log('AFTER SET ARGS');
-		console.log('-----------------------------------');
-		this.get_element(function(err, warn, ok) {
-			this.status_code = 200;
+		this.get_element(function(err, warn, sel_type) {
+			if(err||warn) return cb(err, warn);
+			
+			
+			
+			var send_events = function(args, pos, min, max) {
+				console.log('sending key event # ' + pos);
+				if(pos < event_args.length) {
+					var random = get_random_time(min, max);
+					console.log('random is ' + random);
+					return setTimeout(function() {
+						console.log(args[pos]);
+						this.page.sendEvent.apply(this, args[pos]);
+						return send_events(args, ++pos, min, max);
+					}.bind(this), random);
+				}
+				else {
+					var ok = 'Successfully entered ' + this.req_args['text'] + ' to element ' + this.req_args['selector'];
+					return cb(false, false, ok);
+				}
+				
+			}.bind(this);
+			
+			var event_args = keypress_event_args(this.req_args['text']);
+			var min_time = parseInt(this.req_args.timeout * 0.5);
+			var max_time = parseInt(this.req_args.timeout * 1.5);
+			return send_events(event_args, 0, min_time, max_time);
+			
+			
 			this.mf_content_type = 'application/json';
-			return cb(err, warn, ok);
+			return cb(false, false, 'ok');
 		}.bind(this));
+			
+			
 	}.bind(this));
 };
 
@@ -425,9 +507,8 @@ MF_Eddie.prototype.follow_link = function(args, cb) {
 				if(res[0]) return cb(res[0]);
 				return setTimeout(function() {
 					return this.cache_page(new_link, this.page_content_type, function() {
-						var warn = (this.warnings.length > 0);
-						var ok = (warn) ? false : "Followed link to " + new_link + '.  Page content-type is ' + this.page_content_type;
-						return cb(false, warn, ok);
+						var ok = "Followed link to " + new_link + '.  Page content-type is ' + this.page_content_type;
+						return cb(false, false, ok);
 					}.bind(this));
 				}.bind(this),this.req_args.timeout);
 
@@ -449,10 +530,6 @@ MF_Eddie.prototype.get_element = function(cb) {
 	var selector_type = this.req_args.force_selector_type || get_selector_type(this.req_args.selector);
 	var timeout = this.req_args.timeout || WAIT;
 	var req_args = this.req_args;
-	console.log('GET EL, CHECK REQ ARGS');
-	for(var a in req_args) {
-		console.log(a + ': ' + req_args[a]);
-	}
 	var eval_args = {selector_type: selector_type, req_args: req_args};
 
 	this.page.evaluate(evaluateWithArgs(function(args) {
@@ -460,10 +537,10 @@ MF_Eddie.prototype.get_element = function(cb) {
 			  if (el.fireEvent) {
 				el.fireEvent('on' + etype);
 			  } else {
-				var evObj = document.createEvent('Events');
-				evObj.initEvent(etype, true, false);
-				el.dispatchEvent(evObj);
-			  }
+					var evObj = document.createEvent('Events');
+					evObj.initEvent(etype, true, false);
+					el.dispatchEvent(evObj);
+				}
 			}
 			
 			function getElementByXpath(path) {
@@ -484,6 +561,7 @@ MF_Eddie.prototype.get_element = function(cb) {
 					height : rect.height
 				};
 			}
+			
 		try {
 			var element;
 			if(args['selector_type'] == 'css') {
@@ -522,8 +600,11 @@ MF_Eddie.prototype.get_element = function(cb) {
 						var warning = args.req_args.selector + ' does not appear to have a value attribute.  Use force =1 to override';
 						return [false, warning, false];
 					}
-					element.value = args.req_args['text'];
-					return [false, false, 'Set value for field ' + args.req_args.selector + ' to ' + args.req_args['text']];
+					element.addEventListener("click", function() {
+						console.log('KEYPRESSKEYPRESSKEYPRESSKEYPRESSKEYPRESSKEYPRESSKEYPRESSKEYPRESSKEYPRESSKEYPRESS');
+					});
+					eventFire(element, 'click');
+					return [false, false, args['selector_type']];
 				break;
 				case 'follow_link':
 					var current_link = window.location.href;
@@ -535,9 +616,15 @@ MF_Eddie.prototype.get_element = function(cb) {
 			}
 		}
 		catch(err) {
+			console.log(err);
 			return [err.message, false, false];
 		}
 	}, eval_args), function(res) {
+			console.log('BOTTOM CB, CHECK RES');
+			console.log(res);
+			console.log(res[0]);
+			console.log(res[1]);
+			console.log(res[2]);
 			var err = res[0];
 			var warn = res[1];
 			var ok = res[2];
@@ -545,30 +632,15 @@ MF_Eddie.prototype.get_element = function(cb) {
 	});
 };
 
-
-
-// Gets the page's content by returning the outer HTML of the <html> tag
-MF_Eddie.prototype.get_page_html = function(cb, to) {
-    this.current_action = 'get_html';
-    var timeout = to || WAIT;
-    var getPageHTML = function () {
-        this.page.evaluate(function() {
-            return document.querySelectorAll('html')[0].outerHTML;
-        }, function(res) {
-            return cb(null, res);
-        });
-    }.bind(this);
-    setTimeout(getPageHTML, timeout);
-}
 // Simply gets the page's content
 MF_Eddie.prototype.get_content = function(args, cb) {
 	var timeout = false;
 	var wrapper_fn = function() {
-		if(!timeout) timeout = this.req_args.content;
+		if(!timeout) timeout = WAIT;
 		var getContent = function() {
 			this.page.getContent(function(res) {
 				if(res) {
-					this.mf_content_type = this.page_content_type || this.mf_content_type;
+					this.mf_content_type = false;
 					return cb(false, false, res);
 				}
 				this.mf_content_type = 'application/json';
@@ -579,7 +651,7 @@ MF_Eddie.prototype.get_content = function(args, cb) {
 	}.bind(this);
 	
 	if(args) {return this.set_args(args, wrapper_fn);}
-	else {timeout = 2000; return wrapper_fn(); }
+	else {timeout = WAIT; return wrapper_fn(); }
 }
 
 MF_Eddie.prototype.kill = function(args, cb) {
