@@ -267,7 +267,6 @@ MF_Eddie.prototype.visit = function(args, cb) {
                     this.eventEmitter.emit('fatal_error');
                     return;
                 } else {
-                    console.log('push warning of resource timeout');
                     this.warnings.push('Resource Timeout: ' + request.url +
                         ' timed out while loading page.');
                 }
@@ -361,8 +360,6 @@ MF_Eddie.prototype.back = function(args, cb) {
 MF_Eddie.prototype.forward = function(args, cb) {
     this.set_args(args, function() {
         var last_pos = this.history_queue.length - 1;
-        console.log('last pos is ' + last_pos);
-        console.log('current pos is ' + this.history_queue_pos);
         if (this.history_queue_pos >= last_pos) {
             return cb(false, "Can't go forward, there are no previously loaded pages.\n");
         }
@@ -429,7 +426,7 @@ function keypress_event_args(string) {
     for (var i = 0; i < string_arr.length; i++) {
         var char = string_arr[i];
         if (char == '\\' && string_arr[i + 1] == 'n') {
-            char = key_map['Enter'];
+            char = key_map['Return'];
             i++;
         }
 
@@ -599,7 +596,9 @@ MF_Eddie.prototype.get_element = function(cb) {
                                 ' does not appear to have a value attribute.  Use force =1 to override';
                             return [false, warning, false];
                         }
-                        eventFire(element, 'focus');
+                        // Firing a focus event seems to occassionally cause a problem on the subsequent keypress sequence.
+                        // Also, click events are more human than blur events, I guess.
+                        //eventFire(element, 'focus');
                         eventFire(element, 'click');
                         return [false, false, true];
                         break;
@@ -625,7 +624,7 @@ MF_Eddie.prototype.get_element = function(cb) {
 
 // Simply gets the page's content
 MF_Eddie.prototype.get_content = function(args, cb) {
-    var timeout = false;
+    var timeout = this.req_args.timeout || false;
     var wrapper_fn = function() {
         if (!timeout) timeout = WAIT;
         var getContent = function() {
