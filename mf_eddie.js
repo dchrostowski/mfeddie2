@@ -289,7 +289,7 @@ MF_Eddie.prototype.visit = function(args, cb) {
             }.bind(this));
 
             page.set('onConsoleMessage', function(msg) {
-                //console.log(msg);
+                console.log(msg);
             });
 
             page.set('onResourceReceived', function(resp) {
@@ -442,6 +442,56 @@ function get_random_time(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+MF_Eddie.prototype.verify_text_entry = function(sel_type, cb) {
+	var eval_args = {
+		selector_type:sel_type,
+		selector: this.req_args.selector,
+		text: this.req_args.text
+	};
+	
+	
+	this.page.evaluate(evaluateWithArgs(function(args) {
+		
+		function getElementByXpath(path) {
+            return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,
+                null).singleNodeValue;
+        }
+
+        function getElementByQuerySelector(sel) {
+            return document.querySelector(sel);
+        }
+        
+		try {
+			var element;
+			if(args.selector_type == 'css') element = getElementByQuerySelector(args.selector);
+			else element = getElementByXpath(args.selector);
+			if(typeof element.value === 'undefined') {
+				console.log('element.value is undefined');
+				return [false, 'Unable to verify text was entered in element ' + args.selector, false];
+			}
+			var value = element.value;
+			console.log('value was set to ' + value);
+			if(value.length > 0 && value.indexOf(args.text) > -1) {
+				console.log('verified value');
+				return [false, false, 'Verified text was set to ' + value];
+			}
+			else {
+				console.log('didnt verify, setting manually');
+				element.value = args.text;
+				return [false, false, 'Verified text was set to ' + args.text];
+			}
+		} catch (err) {
+			return [err.message, false, false];
+		}
+	}, eval_args), function(res) {
+		var err = res[0];
+		var warn = res[1];
+		var ok = res[2];
+		return cb(err, warn, ok);
+	}.bind(this));
+	
+}
+
 
 
 MF_Eddie.prototype.enter_text = function(args, cb) {
@@ -459,7 +509,15 @@ MF_Eddie.prototype.enter_text = function(args, cb) {
                 } else {
                     var ok = 'Successfully entered ' + this.req_args['text'] +
                         ' to element ' + this.req_args['selector'];
-                    return cb(false, false, ok);
+					var verify_cb = function(v_err, v_warn, v_ok) {
+						if(v_warn) this.warnings.push(v_warn);
+						if(v_err) return cb(v_err);
+						return cb(false, false, ok);
+					}.bind(this);
+					if(this.req_args.text.indexOf('\\n') == -1) {
+						return this.verify_text_entry(sel_type, verify_cb);
+					}
+					else return cb(false, false, ok);
                 }
 
             }.bind(this);
@@ -598,9 +656,11 @@ MF_Eddie.prototype.get_element = function(cb) {
                         }
                         // Firing a focus event seems to occassionally cause a problem on the subsequent keypress sequence.
                         // Also, click events are more human than blur events, I guess.
-                        //eventFire(element, 'focus');
+                        //eventFire(element, 'click');
+                        eventFire(element, 'focus');
                         eventFire(element, 'click');
-                        return [false, false, true];
+                        
+                        return [false, false, args.selector_type];
                         break;
                     case 'follow_link':
                         var current_link = window.location.href;
@@ -618,7 +678,11 @@ MF_Eddie.prototype.get_element = function(cb) {
         var err = res[0];
         var warn = res[1];
         var ok = res[2];
-        return cb(err, warn, ok);
+        var cb_to = function() {
+			return cb(err, warn, ok);
+		};
+		
+		return setTimeout(cb_to, 2000);
     });
 };
 
@@ -650,6 +714,7 @@ MF_Eddie.prototype.get_content = function(args, cb) {
 
 MF_Eddie.prototype.kill = function(args, cb) {
     this.set_args(args, function() {
+		this.mf_content_type = 'application/json';
         var ok = 'killing browser with phantom pid ' + args.pid;
         return cb(false, false, ok);
     }.bind(this));
