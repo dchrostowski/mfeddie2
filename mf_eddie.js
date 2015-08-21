@@ -3,442 +3,738 @@
  * Browser objects will be made from this class.
  * Provides the basic functions (visit, click, get_html) of the browser.
  *
-*/
+ */
 'use strict';
 var config = require('config');
 var phantom = require('phantom');
 var URL = require('url');
 var mf_log = require('./mf_log');
-
-
-var TIMEOUT = config.get('timeout') || 2500;
+var events = require('events');
 var WAIT = config.get('wait') || 800;
-
-function evaluateWithArgs(fn) {
-    return "function() { return (" + fn.toString() + ").apply(this, " + JSON.stringify(Array.prototype.slice.call(arguments, 1)) + ");}";
-}
 
 MF_Eddie.prototype.get_phantom_pid = function() {
     var pid = this.ph.process.pid;
     return pid;
 }
-
-MF_Eddie.prototype.set_phantom = function (p, cb) {
+MF_Eddie.prototype.set_phantom = function(p, cb) {
+    mf_log.log('set phantom called');
     this.ph = p;
-    if(cb && typeof cb == 'function')
-        return cb(null);
+    if (cb && typeof cb == 'function')
+        return cb();
     return;
 };
 
-MF_Eddie.prototype.set_page = function(p, cb, rcf) {
-    this.page = p;
-    var warn = false;
-    if(this.timedOut) warn = "Page timed out during load.  Returned partially loaded page.";
-    if(rcf) {
-        return this.get_content(1500, function(err, content) {
-            return cb(err, warn, content);
-        });
-    }
-    return cb(false, warn, 1);
-};
-
-MF_Eddie.prototype.update_args = function(args, cb) {
-	this.proxy = args.proxy;
-    this.user_agent = args.user_agent;
-    this.load_media = args.load_media;
-    this.load_external = args.load_external;
-    this.timeout = args.timeout || TIMEOUT;
-    this.allowed = args.allowed;
-    this.disallowed = args.disallowed;
-    this.return_on_timeout = args.return_on_timeout;
-    this.require_proxy = args.require_proxy;
-
-    this.page_content_type = 'text/html';
-    this.status_code = '';
-    this.loadInProgress = false;
-    this.page_html = 'No page loaded';
-    this.timedOut = false;
-    this.current_action = 'init';
-    this.url = null;
-    this.load_time = 0;
-    
-    if(typeof cb === 'function') return cb();
-    return;
+MF_Eddie.prototype.cache_page = function(url, content_type, cb) {
+    if (typeof content_type === 'undefined' || !content_type) content_type = 'text/html';
+    var cached_content = {
+        url: url,
+        content_type: content_type
+    };
+    this.history_queue.push(cached_content);
+    this.history_queue_pos++;
+    return cb();
 }
 
-function MF_Eddie(args, cb) {
-    this.update_args(args);
-    
-    var parameters_arg = (this.require_proxy) ? {paramaters: {proxy: args.proxy}} : false;
-    if(args.require_proxy) {
-		phantom.create({parameters: {proxy: args.proxy}}, function(ph) {
-			this.set_phantom(ph, cb);
-		}.bind(this));
-	}
-	else {
-		phantom.create(function(ph) {
-			this.set_phantom(ph, cb);
-		}.bind(this));
-	}
+MF_Eddie.prototype.set_page = function(err, page, cb) {
+    var ok = false;
+    if (page) {
+        ok = true;
+        this.page = page;
+        var cache_cb = function() {
+            if (cb && typeof cb === 'function') {
+                return cb(err, ok);
+            }
+        }
+        return this.cache_page(this.req_args.url, this.page_content_type, cache_cb);
+    }
+}
+
+
+function MF_Eddie(args, cb, mf_instances) {
+    var push_instance_cb = function(err, pid) {
+        return cb(err, this);
+    }.bind(this);
+    var phantom_cb = function() {
+        return mf_instances.push_instance(this, push_instance_cb);
+    }.bind(this);
+
+    this.warnings = [];
+    this.history_queue = [];
+    this.history_queue_pos = -1;
+    this.mf_content_type = false;
+    this.fatal_error = false;
+    this.eventEmitter = new events.EventEmitter();
+
+    var permanent_args = config.get('permanent_args');
+
+    this.settings = {};
+    for (var i in permanent_args) {
+        var arg_name = permanent_args[i];
+        this.settings[arg_name] = args[arg_name];
+        delete args[arg_name];
+    }
+
+    var parameters_arg = (this.settings.require_proxy !== 'undefined') ? {
+        paramaters: {
+            proxy: this.settings.proxy
+        }
+    } : false;
+    if (this.settings.require_proxy) {
+        return phantom.create({
+            parameters: {
+                proxy: this.settings.proxy
+            }
+        }, function(ph) {
+            return this.set_phantom(ph, phantom_cb);
+        }.bind(this));
+    } else {
+        return phantom.create(function(ph) {
+            return this.set_phantom(ph, phantom_cb);
+        }.bind(this));
+    }
 };
 
 function base_url(url) {
     return url.match(/^https?:\/\/[^\/]+/i);
+}
+
+MF_Eddie.prototype.set_args = function(args, cb) {
+    this.req_args = {};
+
+    for (var a in args) {
+        this.req_args[a] = args[a];
+    }
+    cb();
+}
+
+MF_Eddie.prototype.cookie = function() {
+    var pid = this.ph.process.pid;
+    return [
+        ['Set-Cookie', 'pid=' + pid + '; path=/mfeddie']
+    ];
+}
+
+// Will load a page in browser.
+MF_Eddie.prototype.visit = function(args, cb) {
+    this.current_action = 'visit';
+    this.set_args(args, function() {
+
+        var set_page_cb = function(err, ok) {
+            if (this.responded) return;
+            if (err) return cb(err);
+
+            if (ok) {
+                ok = 'Successfully visited page.';
+            }
+
+            if (this.req_args.get_content && !err) {
+                var get_content_cb = function(err, warn, content) {
+                    if (err || warn) {
+                        this.fatal_error = err || warn;
+                        this.eventEmitter.emit('fatal_error');
+                        return;
+                    }
+                    this.page_content_type = this.page_content_type || 'text/html';
+                    this.mf_content_type = false;
+                    this.responded = true;
+                    return cb(false, false, content);
+                }.bind(this);
+                return this.get_content(false, get_content_cb);
+            } else {
+                this.mf_content_type = 'application/json';
+                this.responded = true;
+                return cb(err, false, ok);
+            }
+        }.bind(this);
+
+
+        this.ph.createPage(function(page) {
+
+            var page_timeout_fn = function() {
+                mf_log.log('Page timeout while fetching ' + this.current_url);
+                if (this.settings.return_on_timeout && this.page_content_type) {
+                    this.eventEmitter.removeListener('page_timeout', page_timeout_fn);
+                    this.warnings.push(
+                        'Page failed to fully load prior to page timeout.');
+                    return this.set_page(false, page, set_page_cb);
+                } else {
+                    this.status_code = 504;
+                    this.fatal_error = 'Gateway Timeout: The page at ' + this.current_url +
+                        ' failed to load within the time specified (' + this.settings
+                        .page_timeout + ' ms)';
+                    this.eventEmitter.emit('fatal_error');
+                    return;
+                }
+            }.bind(this);
+
+            this.eventEmitter.on('page_timeout', page_timeout_fn);
+
+            page.set('viewportSize', {
+                width: 800,
+                height: 800
+            });
+            page.set('paperSize', {
+                width: 1024,
+                height: 768,
+                border: '0px'
+            });
+            page.set('settings.userAgent', this.settings.user_agent);
+            page.set('settings.resourceTimeout', this.settings.resource_timeout);
+
+
+            page.set('onLoadStarted', function() {
+                this.load_in_progress = true;
+            }.bind(this));
+
+
+
+            page.set('onLoadFinished', function() {
+                this.load_in_progress = false;
+            }.bind(this));
+
+
+            var hostname = URL.parse(this.req_args.url).hostname.replace('www.', '');
+            var base = base_url(this.req_args.url);
+            var request_filter_args = {
+                base_url: base,
+                hostname: hostname,
+                load_external: this.settings.load_external,
+                load_images: this.settings.load_images,
+                load_css: this.settings.load_css,
+                allowed: this.settings.allowed,
+                disallowed: this.settings.disallowed
+            };
+            // Will determine whether or not to abort a given request
+            page.onResourceRequested(
+                function(requestData, request, scoped_args) {
+                    // If allowed, do nothing, return.
+                    for (var i in scoped_args['allowed']) {
+                        if (requestData['url'].indexOf(scoped_args['allowed'][i]) > -
+                            1) {
+                            //console.log('allow request: ' + requestData['url'] + ' is explicitly allowed.');
+                            return;
+                        }
+                    }
+                    // If disallowed, abort request
+                    for (var i in scoped_args['disallowed']) {
+                        if (requestData['url'].indexOf(scoped_args['disallowed'][i]) >
+                            -1) {
+                            //console.log('abort request: ' + requestData['url'] + ' is explicitly disallowed.');
+                            return request.abort();
+                        }
+                    }
+                    var is_subdomain = false;
+                    if (!scoped_args['load_external'] && requestData['url'].match(
+                            /(?:\w+\.)+\w+/m).toString().indexOf(scoped_args[
+                            'hostname']) > -1)
+                        is_subdomain = true;
+                    var is_external = false;
+                    if (!scoped_args['load_external'] && requestData['url'].indexOf(
+                            scoped_args['base_url']) != 0 && requestData['url'].indexOf(
+                            '/') != 0)
+                        is_external = true;
+                    if (!scoped_args['load_external'] && !is_subdomain && is_external) {
+                        //console.log('abort request: ' + requestData['url'] + ' is external');
+                        return request.abort();
+                    }
+                    if (!scoped_args['load_images'] && (
+                            /\.(tif|tiff|png|jpg|jpeg|gif)($|\?)/).test(requestData[
+                            'url'])) {
+                        //console.log('abort request: '  + requestData['url'] + ' appears to be an image file');
+                        return request.abort();
+                    }
+                    if (!scoped_args['load_css'] && (/\.css($|\?)/).test(requestData[
+                            'url'])) {
+                        //console.log('abort request: '  + requestData['url'] + ' appears to be css');
+                        return request.abort();
+                    }
+                    return;
+                },
+                function(requestData) {}, request_filter_args
+            );
+            // If a resource does not load within the timeout, abort all requests and close the browser.
+            page.set('onResourceTimeout', function(request) {
+
+                if (request.url == this.current_url || !this.page_content_type) {
+                    this.status_code = 504;
+                    this.fatal_error = "Resource/Gateway Timeout: " + request.url +
+                        " did not load in time.";
+                    this.eventEmitter.emit('fatal_error');
+                    return;
+                } else if (!this.settings.return_on_timeout) {
+                    this.fatal_error = 'Resource Timeout: ' + request.url +
+                        ' failed to load in time while fetching ' + this.current_url;
+                    this.eventEmitter.emit('fatal_error');
+                    return;
+                } else {
+                    this.warnings.push('Resource Timeout: ' + request.url +
+                        ' timed out while loading page.');
+                }
+
+            }.bind(this));
+
+            page.set('onNavigationRequested', function(url, type, willNavigate, main) {
+                if (main) {
+                    this.current_url = url;
+                    this.page_content_type = false;
+                    this.responded = false;
+                    this.timedOut = false;
+                    this.warnings = [];
+                    setTimeout(function() {
+                        this.eventEmitter.emit('page_timeout');
+                        this.timedOut = true;
+                    }.bind(this), this.settings.page_timeout);
+                }
+
+            }.bind(this));
+
+            page.set('onConsoleMessage', function(msg) {
+                //console.log(msg);
+            });
+
+            page.set('onResourceReceived', function(resp) {
+                var resp_url = resp.url.replace(/\//g, "");
+                var curr_url = this.current_url.replace(/\//g, "");
+
+                if (!this.page_content_type && (resp_url == curr_url)) {
+                    if (resp.redirectURL) {
+                        this.current_url = resp.redirectURL;
+                        this.page_content_type = false;
+                    } else {
+                        this.page_content_type = resp.contentType;
+                        this.status_code = resp.status;
+                    }
+                }
+            }.bind(this));
+
+            page.open(this.req_args.url, function(status) {
+                if (status != 'success') {
+                    this.fatal_error = this.fatal_error ||
+                        "Unknown error ocurred while opening page at " + this.req_args
+                        .url;
+                    this.status_code = this.status_code || 500;
+                    this.eventEmitter.emit('fatal_error');
+                    return;
+                }
+                mf_log.log('Page opened with status code ' + this.status_code +
+                    ' and content type ' + this.page_content_type);
+                return this.set_page(false, page, set_page_cb);
+            }.bind(this));
+        }.bind(this));
+    }.bind(this));
+};
+
+// Instructs mfeddie to simply wait for specified number of millseconds.
+MF_Eddie.prototype.wait = function(args, cb) {
+    this.set_args(args, function() {
+        return setTimeout(function() {
+            this.mf_content_type = 'application/json';
+            return cb(false, false, 'Waited for ' + this.req_args.timeout + ' ms');
+        }.bind(this), this.req_args.timeout);
+    }.bind(this));
+}
+
+// Browser back button
+MF_Eddie.prototype.back = function(args, cb) {
+    this.set_args(args, function() {
+        if (this.history_queue_pos <= 0) {
+            return cb(false, "Can't go back, there are no previously loaded pages.\n");
+        }
+        this.history_queue_pos--;
+
+        this.page.goBack();
+        var ret_fn = function() {
+            var cached = this.history_queue[this.history_queue_pos];
+            this.page_content_type = cached.content_type;
+            var warn = (this.warnings.length > 0);
+            var ok = (warn) ? false : "Went back to " + cached.url;
+            return cb(false, warn, ok);
+            return cb(false, false, "Went back to " + cached.url);
+        }.bind(this);
+        return setTimeout(ret_fn, this.req_args.timeout);
+
+    }.bind(this));
+}
+
+// Browser forward button
+MF_Eddie.prototype.forward = function(args, cb) {
+    this.set_args(args, function() {
+        var last_pos = this.history_queue.length - 1;
+        if (this.history_queue_pos >= last_pos) {
+            return cb(false, "Can't go forward, there are no previously loaded pages.\n");
+        }
+        this.history_queue_pos++;
+        this.page.goForward();
+        var ret_fn = function() {
+            var cached = this.history_queue[this.history_queue_pos];
+            this.page_content_type = cached.content_type;
+            var warn = (this.warnings.length > 0);
+            var ok = (warn) ? false : "Went forward to " + cached.url;
+            return cb(false, warn, ok);
+        }.bind(this);
+        return setTimeout(ret_fn, this.req_args.timeout);
+
+    }.bind(this));
+}
+
+// Renders an image of the page
+MF_Eddie.prototype.render_page = function(args, cb) {
+    this.set_args(args, function() {
+        this.page.render(this.req_args.dl_file_loc);
+        var ret_cb = function() {
+            this.mf_content_type = 'application/json';
+            this.mf_status_code = 200;
+            return cb(false, false, "OK, renderd page to " + this.req_args.dl_file_loc);
+        }.bind(this);
+        return setTimeout(ret_cb, this.req_args.timeout);
+
+    }.bind(this));
+}
+
+MF_Eddie.prototype.click = function(args, cb) {
+    this.set_args(args, function() {
+        return this.get_element(function(err, warn, ok) {
+            this.mf_content_type = 'application/json';
+            if (err || warn) return cb(err, warn);
+            return setTimeout(function() {
+                return cb(err, warn, ok);
+            }, this.req_args.timeout);
+        }.bind(this));
+    }.bind(this));
+};
+
+MF_Eddie.prototype.download_image = function(args, cb) {
+    this.set_args(args, function() {
+        this.get_element(function(err, warn, clipRect) {
+            if (err || warn) return cb(err, warn);
+
+            this.page.set('clipRect', clipRect);
+            this.page.render(this.req_args['dl_file_loc']);
+            return setTimeout(function() {
+                this.mf_content_type = 'application/json';
+                var success = 'Downloaded image to ' + this.req_args[
+                    'dl_file_loc'];
+                return cb(false, false, success);
+            }.bind(this), this.req_args.timeout);
+        }.bind(this));
+    }.bind(this));
+};
+
+function keypress_event_args(string) {
+    var args = [];
+    var key_map = config.get('key_map');
+    var string_arr = string.split('');
+    for (var i = 0; i < string_arr.length; i++) {
+        var char = string_arr[i];
+        if (char == '\\' && string_arr[i + 1] == 'n') {
+            char = key_map['Return'];
+            i++;
+        }
+
+
+
+        var arg = ['keypress', char, null, null];
+        args.push(arg);
+    }
+    return args;
+}
+
+function get_random_time(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+MF_Eddie.prototype.verify_text_entry = function(sel_type, cb) {
+    var eval_args = {
+        selector_type: sel_type,
+        selector: this.req_args.selector,
+        text: this.req_args.text
+    };
+
+
+    this.page.evaluate(evaluateWithArgs(function(args) {
+
+        function getElementByXpath(path) {
+            return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,
+                null).singleNodeValue;
+        }
+
+        function getElementByQuerySelector(sel) {
+            return document.querySelector(sel);
+        }
+
+        try {
+            var element;
+            if (args.selector_type == 'css') element = getElementByQuerySelector(args.selector);
+            else element = getElementByXpath(args.selector);
+            if (typeof element.value === 'undefined') {
+                return [false, 'Unable to verify text was entered in element ' + args.selector,
+                    false
+                ];
+            }
+            var value = element.value;
+            if (value.length > 0 && value.indexOf(args.text) > -1) {
+                return [false, false, 'Verified text was set to ' + value];
+            } else {
+                element.value = args.text;
+                return [false, false, 'Verified text was set to ' + args.text];
+            }
+        } catch (err) {
+            return [err.message, false, false];
+        }
+    }, eval_args), function(res) {
+        var err = res[0];
+        var warn = res[1];
+        var ok = res[2];
+        return cb(err, warn, ok);
+    }.bind(this));
 
 }
-// Will load a page in browser.
-MF_Eddie.prototype.visit = function(url, cb, rcf) {
-    this.current_action = 'visit';
-    this.url = url;
-    this.timedOut = false;
 
-    this.ph.createPage(function(page) {
-        page.set('settings.userAgent', this.user_agent);
-        page.set('settings.resourceTimeout', this.timeout);
-        page.set('onConsoleMessage', function(msg) {});
-        page.set('onLoadStarted', function() {
-            this.loadInProgress = true;
-        }.bind(this));
-        page.set('onLoadFinished', function() {
-            this.loadInProgress = false;
-        }.bind(this));
-        var first_request = true;
-        var hostname = URL.parse(this.url).hostname.replace('www.', '');
-        var base = base_url(this.url);
-        var req_args = {
-            base_url: base,
-            hostname: hostname,
-            load_external: this.load_external,
-            load_media: this.load_media,
-            allowed: this.allowed,
-            disallowed: this.disallowed,
-        };
-        // Will determine whether or not to abort a given request
-        page.onResourceRequested(
-            function(requestData, request, scoped_args) {
-                // If allowed, do not abort
-                for(var i in scoped_args.allowed) {
-                    if(requestData['url'].indexOf(scoped_args.allowed[i]) > -1) {
-                        return;
-                    }
-                }
-                // If disallowed, abort request
-                for(var i in scoped_args.disallowed) {
-                    if(requestData['url'].indexOf(scoped_args.disallowed[i]) > -1) {
-                        request.abort();
-                        return;
-                    }
+
+
+MF_Eddie.prototype.enter_text = function(args, cb) {
+    this.set_args(args, function() {
+        this.get_element(function(err, warn, sel_type) {
+            if (err || warn) return cb(err, warn);
+
+            var send_events = function(args, pos, min, max) {
+                if (pos < event_args.length) {
+                    var random = get_random_time(min, max);
+                    return setTimeout(function() {
+                        this.page.sendEvent.apply(this, args[pos]);
+                        return send_events(args, ++pos, min, max);
+                    }.bind(this), random);
+                } else {
+                    var ok = 'Successfully entered ' + this.req_args['text'] +
+                        ' to element ' + this.req_args['selector'];
+                    var verify_cb = function(v_err, v_warn, v_ok) {
+                        if (v_warn) this.warnings.push(v_warn);
+                        if (v_err) return cb(v_err);
+                        return cb(false, false, ok);
+                    }.bind(this);
+                    if (this.req_args.text.indexOf('\\n') == -1) {
+                        return this.verify_text_entry(sel_type, verify_cb);
+                    } else return cb(false, false, ok);
                 }
 
-                var is_subdomain = false;
-                if(!scoped_args.load_external && requestData['url'].match(/(?:\w+\.)+\w+/m).toString().indexOf(scoped_args.hostname) > -1)
-                    is_subdomain = true;
+            }.bind(this);
 
-                var is_external = false;
-                if(!scoped_args.load_external && requestData['url'].indexOf(scoped_args.base_url) != 0 && requestData['url'].indexOf('/') != 0)
-                    is_external = true;
+            var event_args = keypress_event_args(this.req_args['text']);
+            var min_time = parseInt(this.req_args.timeout * 0.5);
+            var max_time = parseInt(this.req_args.timeout * 1.5);
+            return send_events(event_args, 0, min_time, max_time);
 
-                if(!scoped_args.load_external && !is_subdomain && is_external) {
-                    //console.log('abort request: ' + requestData['url'] + ' is external');
-                    request.abort();
-                    return;
-                }
 
-                if(!scoped_args.load_media && (/\.(css|png|jpg|jpeg)($|\?)/).test(requestData['url'])) {
-                    //console.log('abort request: '  + requestData['url'] + ' is media or styling.');
-                    request.abort();
-                    return;
-                }
-
-                return;
-
-            }, function(requestData) { }, req_args
-        );
-        // If a resource does not load within the timeout, abort all requests and close the browser.
-        page.set('onResourceTimeout', function() {
-            if(this.current_action == 'visit' && !this.timedOut) {
-                this.timedOut = true;
-                if(this.return_on_timeout) {
-                    mf_log.log("Request timed out, returning what has loaded.");
-                    var pcb = function(e, w, c){cb(e, w, c);};
-                    return this.set_page(page, pcb, rcf);
-                }
-                page.close();
-                mf_log.log("Request to " + url + " timed out.  pid: " + this.pid);
-                this.status_code = 504;
-                return cb('Gateway Timeout: Request to ' + url + ' timed out.');
-            }
+            this.mf_content_type = 'application/json';
+            return cb(false, false, 'ok');
         }.bind(this));
 
-        page.set('onResourceReceived', function(resp) {
-            // Will determine the content type to send back to crawler
-            if(resp.id == 1 && resp.stage == 'end') {
-                this.page_content_type = resp.contentType;
-                this.status_code = resp.status;
-            }
-        }.bind(this));
-        var t = Date.now();
-
-
-        page.open(url, function(status) {
-            var err = (status == 'success') ? false : ('Failed to open ' + url);
-            if(err)
-                return cb(err);
-            var pcb = function(e, w, c){cb(e, w, c);};
-            t = Date.now() - t;
-            this.load_time = t;
-            return this.set_page(page, pcb, rcf);
-        }.bind(this));
 
     }.bind(this));
 };
 
-MF_Eddie.prototype.test_jquery = function() {
-	this.page.injectJs(config.get('jquery_lib'), function() {
-		return this.page.evaluate(function() {
-			$('input#fname').val('Toshi');
-			
-			$('#b').click();
-		})
-	}.bind(this));
-}
-
-MF_Eddie.prototype.download_image = function(dl_args) {
-	mf_log.log("reached download_image function");
-    this.current_action = 'download_image';
-
-    var timeout = dl_args.timeout || WAIT;
-
-    if(!dl_args.selector) {
-        return dl_args.callback('Missing required arguments: enter_text(selector)', false, false);
-    }
-    if(!this.page) {
-        return dl_args.callback('Error: no page loaded', false, false);
-    }
-
-    var eval_args = {s:dl_args.selector};
-
-    this.page.injectJs(config.get('jquery_lib'), function() {
-		this.page.evaluate(evaluateWithArgs(function(args) {
-			function getImgDimensions($i) {
-                return {
-                    top : $i.offset().top,
-                    left : $i.offset().left,
-                    width : $i.width(),
-                    height : $i.height()
+MF_Eddie.prototype.follow_link = function(args, cb) {
+    this.set_args(args, function() {
+        return this.get_element(function(err, warn, new_link) {
+            if (err || warn) return cb(err, warn);
+            this.page.evaluate(evaluateWithArgs(function(link) {
+                try {
+                    location.href = link;
+                } catch (err) {
+                    return [err, false];
                 }
-            }
-			var element = $(args.s);
-			if(!element) {
-				var msg = "Element " + args.s + " not found.";
-				return [msg, false, false];
-			}
-			else if(!element.is(":visible")) {
-				var msg = "Element " + args.s + " appears to be hidden.  Use force to override";
-				return [false, msg, false];
-			}
-			
-			var img = getImgDimensions(element);
-			if(img) {
-				return [false, false, img];
-			}
-			return ["Unknown error while downloading.", false, false];
-			
-		}, eval_args), function(res) {
-			setTimeout(function() {
-				var image;
-				if(!res[0] && !res[1]) {
-					image = res[2];
-					res[2] = "OK, downloaded image" 
-				}
-				this.page.set('clipRect', image);
-				this.page.render(dl_args.dl_file_loc);
-				return dl_args.callback(res[0], res[1], res[2]);
-			}.bind(this), timeout);
-		}.bind(this));
-	}.bind(this));
+                return [false, true];
+            }, new_link), function(res) {
+                this.mf_content_type = 'application/json';
+                if (res[0]) return cb(res[0]);
+                return setTimeout(function() {
+                    return this.cache_page(new_link, this.page_content_type,
+                        function() {
+                            var ok = "Followed link to " + new_link +
+                                '.  Page content-type is ' + this.page_content_type;
+                            return cb(false, false, ok);
+                        }.bind(this));
+                }.bind(this), this.req_args.timeout);
 
+            }.bind(this));
+
+        }.bind(this));
+    }.bind(this));
 };
 
-MF_Eddie.prototype.follow_link = function(fl_args) {
-    this.current_action = 'follow_link';
-    
-
-    var timeout = fl_args.timeout || WAIT;
-
-    if(!fl_args.selector) {
-        return fl_args.callback('Missing required arguments: enter_text(selector)', false, false);
-    }
-    if(!this.page) {
-        return fl_args.callback('Error: no page loaded', false, false);
-    }
-
-    var eval_args = {s:fl_args.selector};
-
-    this.page.injectJs(config.get('jquery_lib'), function() {
-		this.page.evaluate(evaluateWithArgs(function(args) {
-			var element = $(args.s);
-			if(!element) {
-				var msg = "Element " + args.s + " not found.";
-				return [msg, false, false];
-			}
-			else if(!element.is(":visible")) {
-				var msg = "Element " + args.s + " appears to be hidden.  Use force_follow=1 to override";
-				return [false, msg, false];
-			}
-			
-			else if(!element[0].href) {
-				var msg = "Element " + args.s + " does not appear to be a link.  Could not find href attribute";
-				return [msg, false, false];
-			}
-			else {
-				location.href = element[0].href;
-			}
-			return [false, false, 'Found element ' + args.s + ' and followed link to ' + element[0].href];
-		}, eval_args), function(res) {
-			setTimeout(function() {return fl_args.callback(res[0], res[1], res[2]);}, timeout);
-		});
-	}.bind(this));
-
-};
-
-
-MF_Eddie.prototype.enter_text = function(et_args) {
-    this.current_action = 'enter_text';
-    mf_log.log('mf_eddie.js: in enter_text fn');
-    mf_log.log("libpath?");
-    mf_log.log(this.ph.libraryPath);
-
-    var timeout = et_args.timeout || WAIT;
-
-    if(!et_args.selector) {
-        return et_args.callback('Missing required arguments: enter_text(selector)', false, false);
-    }
-    if(!this.page) {
-        return et_args.callback('Error: no page loaded', false, false);
-    }
-
-    var eval_args = {s:et_args.selector, f: et_args.force_text, t: et_args.text};
-
-    this.page.injectJs(config.get('jquery_lib'), function() {
-		this.page.evaluate(evaluateWithArgs(function(args) {
-			var element = $(args.s);
-			if(!element) {
-				var msg = "Element " + args.s + " not found.";
-				return [msg, false, false];
-			}
-			else if(!element.is(":visible")) {
-				var msg = "Element " + args.s + " appears to be hidden.  Use force_text=1 to override";
-				return [false, msg, false];
-			}
-			else {
-				element.val(args.t);
-			}
-			return [false, false, 'Found element ' + args.s + ' and entered text'];
-		}, eval_args), function(res) {
-			setTimeout(function() {return et_args.callback(res[0], res[1], res[2]);}, timeout);
-		});
-	}.bind(this));
-
-};
+function evaluateWithArgs(fn) {
+    return "function() { return (" + fn.toString() + ").apply(this, " + JSON.stringify(Array.prototype.slice.call(
+        arguments, 1)) + ");}";
+}
 
 function get_selector_type(selector) {
     var re = /\//;
     return selector.match(re) ? 'xpath' : 'css';
 }
-// Click action
-MF_Eddie.prototype.click = function(c_args) {
-    this.current_action = 'click';
 
-    var timeout = c_args.timeout || WAIT;
+MF_Eddie.prototype.get_element = function(cb) {
+    var selector_type = this.req_args.force_selector_type || get_selector_type(this.req_args.selector);
+    var timeout = this.req_args.timeout || WAIT;
+    var req_args = this.req_args;
+    var eval_args = {
+        selector_type: selector_type,
+        req_args: req_args
+    };
 
-    if(!c_args.selector) {
-        return c_args.callback('Missing required arguments: click(selector)', false, false);
-    }
-    if(!this.page) {
-        return c_args.callback('Error: no page loaded', false, false);
-    }
+    this.page.evaluate(evaluateWithArgs(function(args) {
+        function eventFire(el, etype) {
+            if (el.fireEvent) {
+                el.fireEvent('on' + etype);
+            } else {
+                var evObj = document.createEvent('Events');
+                evObj.initEvent(etype, true, false);
+                el.dispatchEvent(evObj);
+            }
+        }
 
-    var eval_args = {s:c_args.selector, f: c_args.force_click};
-    
-	this.page.injectJs(config.get('jquery_lib'), function() {
-		this.page.evaluate(evaluateWithArgs(function(args) {
-			
-			function eventFire(el, etype){
-			  if (el.fireEvent) {
-				el.fireEvent('on' + etype);
-			  } else {
-				var evObj = document.createEvent('Events');
-				evObj.initEvent(etype, true, false);
-				el.dispatchEvent(evObj);
-			  }
-			}
-			
-			var element = $(args.s);
-			if(!element) {
-				var msg = "Element " + args.s + " not found.";
-				return [msg, false, false];
-			}
-			else if(!element.is(":visible")) {
-				var msg = "Element " + args.s + " appears to be hidden.  Use force_text=1 to override";
-				return [false, msg, false];
-			}
-			else {
-				eventFire(element[0], 'click');
-			}
+        function click(el) {
+            var ev = document.createEvent("MouseEvent");
+            ev.initMouseEvent(
+                "click",
+                true /* bubble */ , true /* cancelable */ ,
+                window, null,
+                0, 0, 0, 0, /* coordinates */
+                false, false, false, false, /* modifier keys */
+                0 /*left*/ , null
+            );
+            el.dispatchEvent(ev);
+        }
 
-			return [false, false, 'Found and clicked element ' + args.s];
-		}, eval_args), function(res) {
-				setTimeout(function() {return c_args.callback(res[0], res[1], res[2]);}, timeout);
-		});
-	}.bind(this));
+        function getElementByXpath(path) {
+            return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,
+                null).singleNodeValue;
+        }
 
+        function getElementByQuerySelector(sel) {
+            return document.querySelector(sel);
+        }
+
+        function get_el_dimensions(el) {
+            var rect = el.getBoundingClientRect();
+
+            return {
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height
+            };
+        }
+
+        try {
+            var element;
+            if (args['selector_type'] == 'css') {
+                element = getElementByQuerySelector(args.req_args['selector']);
+            } else if (args['selector_type'] == 'xpath') {
+                element = getElementByXpath(args.req_args['selector']);
+            } else {
+                var msg = "Invalid selector type '" + args['selector_type'] + "'";
+                return [msg, false, false];
+            }
+            if (element == null || typeof element === 'undefined') {
+                var msg = "Could not match an element with " + args.selector_type +
+                    " selector '" + args.req_args['selector'] + "'";
+                return [false, msg, false];
+            } else if (element.offsetWidth <= 0 && element.offsetHeight <= 0 && !args.req_args[
+                    'force']) {
+                var msg = "Element found but appears to be hidden.  Use force=1 to override.";
+                return [false, msg, false];
+            } else {
+                switch (args.req_args.action) {
+                    case 'click':
+                        click(element);
+                        var ok = 'Fired click event at element ' + args.req_args.selector;
+                        return [false, false, ok];
+                        break;
+                    case 'download_image':
+                        var img = get_el_dimensions(element);
+                        if (img) {
+                            return [false, false, img];
+                        }
+                        return ["Unknown error while downloading.", false, ok];
+                        break;
+                    case 'enter_text':
+                        if (typeof element.attributes.value === 'undefined' && !args.req_args[
+                                'force']) {
+                            var warning = args.req_args.selector +
+                                ' does not appear to have a value attribute.  Use force =1 to override';
+                            return [false, warning, false];
+                        }
+                        // Firing a focus event seems to occassionally cause a problem on the subsequent keypress sequence.
+                        // Also, click events are more human than blur events, I guess.
+                        click(element);
+                        return [false, false, args.selector_type];
+                        break;
+                    case 'follow_link':
+                        var current_link = window.location.href;
+                        var new_link = element.href;
+                        //location.href = new_link;
+                        return [false, false, new_link];
+                        break;
+                }
+            }
+        } catch (err) {
+            return [err.message, false, false];
+        }
+    }, eval_args), function(res) {
+        if (err) mf_log.log('Error on get element: ' + err);
+        var err = res[0];
+        var warn = res[1];
+        var ok = res[2];
+        console.log('err: ' + err);
+        console.log('warn: ' + warn);
+        console.log('ok: ' + ok);
+        var cb_to = function() {
+            return cb(err, warn, ok);
+        };
+
+        return setTimeout(cb_to, 500);
+    });
 };
 
-
-MF_Eddie.prototype.back = function(cb) {
-    this.current_action = 'back';
-    if(this.page.canGoBack) {
-        page.goBack();
-        return cb(null, 'Went back.');
-    }
-    else {
-        return cb("Unable to go back");
-    }
-
-}
-// Gets the page's content by returning the outer HTML of the <html> tag
-MF_Eddie.prototype.get_page_html = function(cb, to) {
-    this.current_action = 'get_html';
-    var timeout = to || WAIT;
-    var getPageHTML = function () {
-        this.page.evaluate(function() {
-            return document.querySelectorAll('html')[0].outerHTML;
-        }, function(res) {
-            return cb(null, res);
-        });
-    }.bind(this);
-    setTimeout(getPageHTML, timeout);
-}
 // Simply gets the page's content
-MF_Eddie.prototype.get_content = function(to, cb) {
-    var timeout = to || WAIT;
-
-    var getContent = function() {
-        this.page.getContent(function(res) {
-            if(res) return cb(null, res);
-        return cb("No content returned");
-        });
+MF_Eddie.prototype.get_content = function(args, cb) {
+    var timeout = this.req_args.timeout || false;
+    var wrapper_fn = function() {
+        if (!timeout) timeout = WAIT;
+        var getContent = function() {
+            this.page.getContent(function(res) {
+                if (res) {
+                    this.mf_content_type = false;
+                    return cb(false, false, res);
+                }
+                this.mf_content_type = 'application/json';
+                return cb("No content returned");
+            }.bind(this));
+        }.bind(this);
+        return setTimeout(getContent, timeout);
     }.bind(this);
 
-    setTimeout(getContent, timeout);
+    if (args) {
+        return this.set_args(args, wrapper_fn);
+    } else {
+        timeout = WAIT;
+        return wrapper_fn();
+    }
 }
+
+MF_Eddie.prototype.kill = function(args, cb) {
+    this.set_args(args, function() {
+        this.mf_content_type = 'application/json';
+        var ok = 'killing browser with phantom pid ' + args.pid;
+        return cb(false, false, ok);
+    }.bind(this));
+}
+
 // Closes the browser
-MF_Eddie.prototype.exit_phantom = function() {
+MF_Eddie.prototype.exit_phantom = function(cb) {
     var pid = this.get_phantom_pid();
-    if(this.page) this.page.close();
+    if (this.page) this.page.close();
     this.ph.exit();
-
+    return cb();
 }
-
 module.exports = MF_Eddie;
