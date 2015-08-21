@@ -1,6 +1,6 @@
 {
     "__comment": "Default",
-    "port": 8314,
+    "port": 8315,
     "timeout": "5000",
     "wait": "800",
     "max_instances": "16",
