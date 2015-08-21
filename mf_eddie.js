@@ -289,7 +289,7 @@ MF_Eddie.prototype.visit = function(args, cb) {
             }.bind(this));
 
             page.set('onConsoleMessage', function(msg) {
-                console.log(msg);
+                //console.log(msg);
             });
 
             page.set('onResourceReceived', function(resp) {
@@ -395,6 +395,7 @@ MF_Eddie.prototype.click = function(args, cb) {
     this.set_args(args, function() {
         return this.get_element(function(err, warn, ok) {
             this.mf_content_type = 'application/json';
+            if (err || warn) return cb(err, warn);
             return setTimeout(function() {
                 return cb(err, warn, ok);
             }, this.req_args.timeout);
@@ -443,16 +444,16 @@ function get_random_time(min, max) {
 }
 
 MF_Eddie.prototype.verify_text_entry = function(sel_type, cb) {
-	var eval_args = {
-		selector_type:sel_type,
-		selector: this.req_args.selector,
-		text: this.req_args.text
-	};
-	
-	
-	this.page.evaluate(evaluateWithArgs(function(args) {
-		
-		function getElementByXpath(path) {
+    var eval_args = {
+        selector_type: sel_type,
+        selector: this.req_args.selector,
+        text: this.req_args.text
+    };
+
+
+    this.page.evaluate(evaluateWithArgs(function(args) {
+
+        function getElementByXpath(path) {
             return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,
                 null).singleNodeValue;
         }
@@ -460,36 +461,33 @@ MF_Eddie.prototype.verify_text_entry = function(sel_type, cb) {
         function getElementByQuerySelector(sel) {
             return document.querySelector(sel);
         }
-        
-		try {
-			var element;
-			if(args.selector_type == 'css') element = getElementByQuerySelector(args.selector);
-			else element = getElementByXpath(args.selector);
-			if(typeof element.value === 'undefined') {
-				console.log('element.value is undefined');
-				return [false, 'Unable to verify text was entered in element ' + args.selector, false];
-			}
-			var value = element.value;
-			console.log('value was set to ' + value);
-			if(value.length > 0 && value.indexOf(args.text) > -1) {
-				console.log('verified value');
-				return [false, false, 'Verified text was set to ' + value];
-			}
-			else {
-				console.log('didnt verify, setting manually');
-				element.value = args.text;
-				return [false, false, 'Verified text was set to ' + args.text];
-			}
-		} catch (err) {
-			return [err.message, false, false];
-		}
-	}, eval_args), function(res) {
-		var err = res[0];
-		var warn = res[1];
-		var ok = res[2];
-		return cb(err, warn, ok);
-	}.bind(this));
-	
+
+        try {
+            var element;
+            if (args.selector_type == 'css') element = getElementByQuerySelector(args.selector);
+            else element = getElementByXpath(args.selector);
+            if (typeof element.value === 'undefined') {
+                return [false, 'Unable to verify text was entered in element ' + args.selector,
+                    false
+                ];
+            }
+            var value = element.value;
+            if (value.length > 0 && value.indexOf(args.text) > -1) {
+                return [false, false, 'Verified text was set to ' + value];
+            } else {
+                element.value = args.text;
+                return [false, false, 'Verified text was set to ' + args.text];
+            }
+        } catch (err) {
+            return [err.message, false, false];
+        }
+    }, eval_args), function(res) {
+        var err = res[0];
+        var warn = res[1];
+        var ok = res[2];
+        return cb(err, warn, ok);
+    }.bind(this));
+
 }
 
 
@@ -509,15 +507,14 @@ MF_Eddie.prototype.enter_text = function(args, cb) {
                 } else {
                     var ok = 'Successfully entered ' + this.req_args['text'] +
                         ' to element ' + this.req_args['selector'];
-					var verify_cb = function(v_err, v_warn, v_ok) {
-						if(v_warn) this.warnings.push(v_warn);
-						if(v_err) return cb(v_err);
-						return cb(false, false, ok);
-					}.bind(this);
-					if(this.req_args.text.indexOf('\\n') == -1) {
-						return this.verify_text_entry(sel_type, verify_cb);
-					}
-					else return cb(false, false, ok);
+                    var verify_cb = function(v_err, v_warn, v_ok) {
+                        if (v_warn) this.warnings.push(v_warn);
+                        if (v_err) return cb(v_err);
+                        return cb(false, false, ok);
+                    }.bind(this);
+                    if (this.req_args.text.indexOf('\\n') == -1) {
+                        return this.verify_text_entry(sel_type, verify_cb);
+                    } else return cb(false, false, ok);
                 }
 
             }.bind(this);
@@ -595,6 +592,19 @@ MF_Eddie.prototype.get_element = function(cb) {
             }
         }
 
+        function click(el) {
+            var ev = document.createEvent("MouseEvent");
+            ev.initMouseEvent(
+                "click",
+                true /* bubble */ , true /* cancelable */ ,
+                window, null,
+                0, 0, 0, 0, /* coordinates */
+                false, false, false, false, /* modifier keys */
+                0 /*left*/ , null
+            );
+            el.dispatchEvent(ev);
+        }
+
         function getElementByXpath(path) {
             return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,
                 null).singleNodeValue;
@@ -604,7 +614,7 @@ MF_Eddie.prototype.get_element = function(cb) {
             return document.querySelector(sel);
         }
 
-        function getImgDimensions(el) {
+        function get_el_dimensions(el) {
             var rect = el.getBoundingClientRect();
 
             return {
@@ -636,16 +646,16 @@ MF_Eddie.prototype.get_element = function(cb) {
             } else {
                 switch (args.req_args.action) {
                     case 'click':
-                        eventFire(element, 'click');
-                        return [false, false, 'Fired click event on ' + args.req_args[
-                            'selector']];
+                        click(element);
+                        var ok = 'Fired click event at element ' + args.req_args.selector;
+                        return [false, false, ok];
                         break;
                     case 'download_image':
-                        var img = getImgDimensions(element);
+                        var img = get_el_dimensions(element);
                         if (img) {
                             return [false, false, img];
                         }
-                        return ["Unknown error while downloading.", false, false];
+                        return ["Unknown error while downloading.", false, ok];
                         break;
                     case 'enter_text':
                         if (typeof element.attributes.value === 'undefined' && !args.req_args[
@@ -656,10 +666,7 @@ MF_Eddie.prototype.get_element = function(cb) {
                         }
                         // Firing a focus event seems to occassionally cause a problem on the subsequent keypress sequence.
                         // Also, click events are more human than blur events, I guess.
-                        //eventFire(element, 'click');
-                        eventFire(element, 'focus');
-                        eventFire(element, 'click');
-                        
+                        click(element);
                         return [false, false, args.selector_type];
                         break;
                     case 'follow_link':
@@ -678,11 +685,14 @@ MF_Eddie.prototype.get_element = function(cb) {
         var err = res[0];
         var warn = res[1];
         var ok = res[2];
+        console.log('err: ' + err);
+        console.log('warn: ' + warn);
+        console.log('ok: ' + ok);
         var cb_to = function() {
-			return cb(err, warn, ok);
-		};
-		
-		return setTimeout(cb_to, 2000);
+            return cb(err, warn, ok);
+        };
+
+        return setTimeout(cb_to, 500);
     });
 };
 
@@ -714,7 +724,7 @@ MF_Eddie.prototype.get_content = function(args, cb) {
 
 MF_Eddie.prototype.kill = function(args, cb) {
     this.set_args(args, function() {
-		this.mf_content_type = 'application/json';
+        this.mf_content_type = 'application/json';
         var ok = 'killing browser with phantom pid ' + args.pid;
         return cb(false, false, ok);
     }.bind(this));

@@ -58,7 +58,8 @@ function decide_fate(mfeddie, cb) {
         } else return cb(false, true);
     }
     if (!keep_alive || fatal_error) {
-        if (fatal_error) mf_log.log('A fatal error occurred: ' + fatal_error + '.  Killing phantom process ' + pid);
+        if (fatal_error) mf_log.log('A fatal error occurred: ' + fatal_error + '.  Killing phantom process ' +
+            pid);
         if (!keep_alive && !fatal_error) mf_log.log('mf_keep_alive = 0, killing phantom process ' + pid);
         return mf_instances.delete_instance(pid, cb);
     }
@@ -204,7 +205,8 @@ function parse_query_args(args, cb) {
                     status: status,
                     message: message
                 };
-                if (warnings.length > 0 && !mfeddie.settings.suppress_warn) content['warnings'] = warnings;
+                if (warnings.length > 0 && !mfeddie.settings.suppress_warn) content['warnings'] =
+                    warnings;
                 content = JSON.stringify(content);
             } else {
                 content = ok;
@@ -248,7 +250,8 @@ function parse_query_args(args, cb) {
         }
         var process_id = validated_args.pid;
         var action = validated_args.action;
-        if (!process_id && action == 'visit') return new MF_Eddie(validated_args, instance_callback, mf_instances);
+        if (!process_id && action == 'visit') return new MF_Eddie(validated_args, instance_callback,
+            mf_instances);
         else if (!process_id && action != 'visit') {
             var err = JSON.stringify({
                 status: 'Error',
@@ -318,7 +321,8 @@ var server = http.createServer(function(req, res) {
     }
     req_args['url'] = req_args.url || req.url;
 
-    if ((req_args.action == 'click' || req_args.action == 'back') && typeof req_args.keep_alive == 'undefined') {
+    if ((req_args.action == 'click' || req_args.action == 'back') && typeof req_args.keep_alive ==
+        'undefined') {
         req_args['keep_alive'] = 1;
     }
 
