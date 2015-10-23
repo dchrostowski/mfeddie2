@@ -5,6 +5,7 @@ var log_std_out = config.get('log_std_out');
 var log_date = config.get('log_date');
 
 exports.log = function (str) {
+	return;
     var date = '[' + new Date().toISOString() + ']: ';
     if(log_std_out) {
 		if(log_date) console.log(date + str);

@@ -49,6 +49,11 @@ MF_Eddie.prototype.set_page = function(err, page, cb) {
     }
 }
 
+function exit_callback() {
+	console.log('exited');
+	return;
+}
+
 
 function MF_Eddie(args, cb, mf_instances) {
     var push_instance_cb = function(err, pid) {
@@ -81,6 +86,7 @@ function MF_Eddie(args, cb, mf_instances) {
     } : false;
     if (this.settings.require_proxy) {
         return phantom.create({
+			onExit: exit_callback,
             parameters: {
                 proxy: this.settings.proxy
             }
@@ -88,7 +94,7 @@ function MF_Eddie(args, cb, mf_instances) {
             return this.set_phantom(ph, phantom_cb);
         }.bind(this));
     } else {
-        return phantom.create(function(ph) {
+        return phantom.create({onExit:exit_callback}, function(ph) {
             return this.set_phantom(ph, phantom_cb);
         }.bind(this));
     }
@@ -685,9 +691,9 @@ MF_Eddie.prototype.get_element = function(cb) {
         var err = res[0];
         var warn = res[1];
         var ok = res[2];
-        console.log('err: ' + err);
-        console.log('warn: ' + warn);
-        console.log('ok: ' + ok);
+        //console.log('err: ' + err);
+        //console.log('warn: ' + warn);
+        //console.log('ok: ' + ok);
         var cb_to = function() {
             return cb(err, warn, ok);
         };
