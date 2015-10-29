@@ -50,8 +50,7 @@ MF_Eddie.prototype.set_page = function(err, page, cb) {
 }
 
 function exit_callback() {
-	console.log('exited');
-	return;
+    return;
 }
 
 
@@ -86,7 +85,7 @@ function MF_Eddie(args, cb, mf_instances) {
     } : false;
     if (this.settings.require_proxy) {
         return phantom.create({
-			onExit: exit_callback,
+            onExit: exit_callback,
             parameters: {
                 proxy: this.settings.proxy
             }
@@ -318,7 +317,7 @@ MF_Eddie.prototype.visit = function(args, cb) {
                     this.fatal_error = this.fatal_error ||
                         "Unknown error ocurred while opening page at " + this.req_args
                         .url;
-                    this.status_code = this.status_code || 500;
+                    this.status_code = 500;
                     this.eventEmitter.emit('fatal_error');
                     return;
                 }
@@ -433,7 +432,7 @@ function keypress_event_args(string) {
     for (var i = 0; i < string_arr.length; i++) {
         var char = string_arr[i];
         if (char == '\\' && string_arr[i + 1] == 'n') {
-            char = key_map['Return'];
+            char = key_map['Enter'];
             i++;
         }
 
@@ -518,7 +517,7 @@ MF_Eddie.prototype.enter_text = function(args, cb) {
                         if (v_err) return cb(v_err);
                         return cb(false, false, ok);
                     }.bind(this);
-                    if (this.req_args.text.indexOf('\\n') == -1) {
+                    if (this.req_args.text !== 'undefined' && this.req_args.text.indexOf('\\n') == -1) {
                         return this.verify_text_entry(sel_type, verify_cb);
                     } else return cb(false, false, ok);
                 }
