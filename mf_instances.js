@@ -24,86 +24,130 @@ function MF_Instances() {
 };
 // get relative complement of a in b
 function relative_compliment(a, b) {
-	var hash = {};
-	for(var i=0; i<b.length; i++) {
-		hash[b[i]] = 1;
-	}
-	
-	for(var i=0; i<a.length; i++) {
-		delete hash[a[i]];
-	}
-	
-	var c = new Array();
-	var i=0;
-	for(var n in hash) {
-		c[i++] = n;
-	}
-	
-	return c;
+    var hash = {};
+    for (var i = 0; i < b.length; i++) {
+        hash[b[i]] = 1;
+    }
+
+    for (var i = 0; i < a.length; i++) {
+        delete hash[a[i]];
+    }
+
+    var c = new Array();
+    var i = 0;
+    for (var n in hash) {
+        c[i++] = n;
+    }
+
+    return c;
 }
 
-function phantom_procs (tracked_pids) {
-	var node_pid = process.pid;
-	console.log('\nthe nodejs process is ' + node_pid + '\n');
-	var lines = new Array();
-	var system_pids = new Array();
-	var rogue_pids = new Array();
-	
-	var exec_cb = function(so) {
-		lines = so.split(/\r?\n/g);
-		for(var i=0; i<lines.length; i++) {
-			var line_data = lines[i].match(/(\w+)/g);
-			if(line_data === null) continue;
-			var ppid = parseInt(line_data[0]);
-			var pid = parseInt(line_data[1]);
-			var etime = parseInt(line_data[2]);
-			var cmd_start = line_data[3];
-			
-			if(cmd_start === 'phantomjs' && etime > 60) {
-				if(ppid === node_pid || ppid === 1) {
-					system_pids.push(pid);
-				}
-			}
-			
-		}
-		console.log('top:tracked, bottom:system');
-		console.log(tracked_pids);
-		console.log(system_pids);
+/* 
+ * Probes and identifies the system for rogue processes that may 
+ * have spawned and kills them.  Does this by making a ps system call 
+ * and parses STDOUT.
+ * ps -eo ppid,pid,etime,command | grep phantomjs
+ * */
+function phantom_procs(tracked_pids) {
+    // NodeJS process running
+    var node_pid = process.pid;
+    
+    var lines = new Array();
+    var system_pids = new Array();
+    var rogue_pids = new Array();
+
+    // exec callback, takes system call's stdout
+    var exec_cb = function(so) {
 		
-		rogue_pids = relative_compliment(tracked_pids, system_pids);
-		console.log('\nfound these rogue pids:');
-		console.log(rogue_pids);
-		
-		
-		if(rogue_pids !== null && rogue_pids.length > 0) {
-			exec('kill ' + rogue_pids.join(' '), function(err, so, se) {
-				if(err !== null) {
-					console.log('ERROR WHILE KILLING ROGUE PROCS:');
-					console.log(err);
+		//console.log(so);
+        lines = so.split(/\r?\n/g);
+        
+        for (var i = 0; i < lines.length; i++) {
+            // matching for words and also elapsed time of process
+            // pid ppid etime cmd_start ...
+            //  42 1234 00;49 phantomjs  ...)
+            var line_data = lines[i].match(/^\s*?(\w+)\s+(\w+)\s+(\w+\:\w+\:?\w+?)\s+(\w+)/);
+            
+            if (line_data === null) continue;
+            // Get parent process id
+            var ppid = parseInt(line_data[1]);
+            console.log('PPID? ' + ppid);
+            // Get phantom process id
+            var pid = parseInt(line_data[2]);
+            // Get elapsed time, reverse order of numbers.
+            var etime = line_data[3].split(':').reverse();
+            // Add an hours placeholder if it is needed.
+            //console.log('etime array: ' + etime);
+            while (etime.length < 3) {
+                etime.push(0);
+            }
+            // Determine # of seconds the process has been running
+            etime = (etime[0] * 1) + (etime[1] * 60) + (etime[2] * 60);
+            
+            var cmd_start = line_data[4];
+            
+            
+            console.log('pid: ' + pid + ' ppid: ' + ppid + ' cmd: ' + cmd_start + ' etime: ' + etime);
+            // 1. Is a phantomjs proc
+            // 2. Has been running for at least one minute
+            if (cmd_start === 'phantomjs' && etime > 60) {
+                // parent process id is this nodejs process
+                // OR the process was orphaned
+                if (ppid === node_pid || ppid === 1) {
+                    // push to array of possible rogue procs
+                    system_pids.push(pid);
+                }
+                else {
+					console.log(pid + " IS NOT A PID WE'RE CONCERNED WITH BECAUSE:");
+					console.log(ppid + " !=1 and " + ppid + " != " + node_pid);
+					console.log('pid: ' + pid + ' ppid: ' + ppid + ' cmd: ' + cmd_start + ' etime: ' + etime);
 				}
-				else {
-					console.log('killed rogue processes with the following pids:');
-					for(var i=0; i<rogue_pids.length; i++) {
-						console.log(rogue_pids[i]);
-					}
-				}
-			});
-		}
-	};
-	
-	var proc = exec('ps -eo ppid,pid,etimes,command | grep phantomjs', function(err, stdout, stderr) {
-		stdout
-		if(err !== null) {
-			console.log('ERROR FETCHING PHANTOM PROCS');
-			console.log(err);
-		}
-		else {
-			return exec_cb(stdout);
-		}
-	});
-	
-	
-	
+            }
+
+        }
+        
+
+        if (system_pids.length > 0) {
+            mf_log.log('tracked pids:');
+            mf_log.log(tracked_pids);
+            mf_log.log('possible rogue:');
+            mf_log.log(system_pids);
+        }
+        
+        // if you need to brush up on your discrete math:
+        // https://en.wikipedia.org/wiki/Complement_%28set_theory%29
+        rogue_pids = relative_compliment(tracked_pids, system_pids);
+        if (rogue_pids !== 'undefined' && rogue_pids.length > 0) {
+            mf_log.log('Confirmed rogue processes:');
+            mf_log.log(rogue_pids);
+        }
+        
+        
+
+
+        if (rogue_pids !== null && rogue_pids.length > 0) {
+            exec('kill ' + rogue_pids.join(' '), function(err, so, se) {
+                if (err !== null) {
+                    mf_log.log('Error occurred while trying to kill rogue processes:');
+                    mf_log.log(err);
+                } else {
+                    mf_log.log('successfully killed all rogue processes.');
+                }
+            });
+        }
+    };
+
+    var proc = exec('ps -eo ppid,pid,etime,command | grep phantomjs', function(err, stdout, stderr) {
+        if (err !== null) {
+            mf_log.log('Error while probing phantomjs processes:');
+            mf_log.log(err);
+        } else {
+            return exec_cb(stdout);
+        }
+    });
+
+
+
 }
 // Will iterate through the MF_Eddie instances and determine if an instance has exceeded its time limit.
 function start(self) {
@@ -112,7 +156,7 @@ function start(self) {
         var key_string = '';
         var tracked_pids = new Array();
         for (var key in self.instances) {
-			tracked_pids.push(parseInt(key));
+            tracked_pids.push(parseInt(key));
             var start_time = self.instances[key].time;
             var current_time = (new Date).getTime() / 1000;
             var diff = current_time - start_time;

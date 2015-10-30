@@ -8,6 +8,7 @@
     "process_timeout_seconds": "120",
     "log_file": "development.log",
     "log_std_out": true,
+    "log_file_out": false,
     "log_date": false,
     "actions": [
         "back",
