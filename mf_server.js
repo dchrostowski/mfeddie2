@@ -61,6 +61,7 @@ function decide_fate(mfeddie, cb) {
         if (fatal_error) mf_log.log('A fatal error occurred: ' + fatal_error + '.  Killing phantom process ' +
             pid);
         if (!keep_alive && !fatal_error) mf_log.log('mf_keep_alive = 0, killing phantom process ' + pid);
+        mfeddie = null;
         return mf_instances.delete_instance(pid, cb);
     }
     mf_instances.update_timeout(pid, function() {
