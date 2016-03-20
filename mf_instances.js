@@ -24,86 +24,97 @@ function MF_Instances() {
 };
 // get relative complement of a in b
 function relative_compliment(a, b) {
-	var hash = {};
-	for(var i=0; i<b.length; i++) {
-		hash[b[i]] = 1;
-	}
-	
-	for(var i=0; i<a.length; i++) {
-		delete hash[a[i]];
-	}
-	
-	var c = new Array();
-	var i=0;
-	for(var n in hash) {
-		c[i++] = n;
-	}
-	
-	return c;
+    var hash = {};
+    for(var i=0; i<b.length; i++) {
+        hash[b[i]] = 1;
+    }
+
+    for(var i=0; i<a.length; i++) {
+        delete hash[a[i]];
+    }
+
+    var c = new Array();
+    var i=0;
+    for(var n in hash) {
+        c[i++] = n;
+    }
+
+    return c;
 }
 
 function phantom_procs (tracked_pids) {
-	var node_pid = process.pid;
-	console.log('\nthe nodejs process is ' + node_pid + '\n');
-	var lines = new Array();
-	var system_pids = new Array();
-	var rogue_pids = new Array();
-	
-	var exec_cb = function(so) {
-		lines = so.split(/\r?\n/g);
-		for(var i=0; i<lines.length; i++) {
-			var line_data = lines[i].match(/(\w+)/g);
-			if(line_data === null) continue;
-			var ppid = parseInt(line_data[0]);
-			var pid = parseInt(line_data[1]);
-			var etime = parseInt(line_data[2]);
-			var cmd_start = line_data[3];
-			
-			if(cmd_start === 'phantomjs' && etime > 60) {
-				if(ppid === node_pid || ppid === 1) {
-					system_pids.push(pid);
-				}
-			}
-			
-		}
-		console.log('top:tracked, bottom:system');
-		console.log(tracked_pids);
-		console.log(system_pids);
-		
-		rogue_pids = relative_compliment(tracked_pids, system_pids);
-		console.log('\nfound these rogue pids:');
-		console.log(rogue_pids);
-		
-		
-		if(rogue_pids !== null && rogue_pids.length > 0) {
-			exec('kill ' + rogue_pids.join(' '), function(err, so, se) {
-				if(err !== null) {
-					console.log('ERROR WHILE KILLING ROGUE PROCS:');
-					console.log(err);
-				}
-				else {
-					console.log('killed rogue processes with the following pids:');
-					for(var i=0; i<rogue_pids.length; i++) {
-						console.log(rogue_pids[i]);
-					}
-				}
-			});
-		}
-	};
-	
-	var proc = exec('ps -eo ppid,pid,etimes,command | grep phantomjs', function(err, stdout, stderr) {
-		stdout
-		if(err !== null) {
-			console.log('ERROR FETCHING PHANTOM PROCS');
-			console.log(err);
-		}
-		else {
-			return exec_cb(stdout);
-		}
-	});
-	
-	
-	
+    var node_pid = process.pid;
+    console.log('\nthe nodejs process is ' + node_pid + '\n');
+    var lines = new Array();
+    var system_pids = new Array();
+    var rogue_pids = new Array();
+
+    var exec_cb = function(so) {
+        lines = so.split(/\r?\n/g);
+        for(var i=0; i<lines.length; i++) {
+            var line_data = lines[i].match(/(\w+)/g);
+            if(line_data === null) continue;
+            var ppid = parseInt(line_data[0]);
+            var pid = parseInt(line_data[1]);
+            var etime = parseInt(line_data[2]);
+            var cmd_start = line_data[3];
+
+            if(cmd_start === 'phantomjs' && etime > 60) {
+                if(ppid === node_pid || ppid === 1) {
+                    system_pids.push(pid);
+                }
+            }
+
+        }
+        console.log('top:tracked, bottom:system');
+        console.log(tracked_pids);
+        console.log(system_pids);
+
+        rogue_pids = relative_compliment(tracked_pids, system_pids);
+        console.log('\nfound these rogue pids:');
+        console.log(rogue_pids);
+
+
+        if(rogue_pids !== null && rogue_pids.length > 0) {
+            exec('kill ' + rogue_pids.join(' '), function(err, so, se) {
+                if(err !== null) {
+                    console.log('ERROR WHILE KILLING ROGUE PROCS:');
+                    console.log(err);
+                }
+                else {
+                    console.log('killed rogue processes with the following pids:');
+                    for(var i=0; i<rogue_pids.length; i++) {
+                        console.log(rogue_pids[i]);
+                    }
+                }
+            });
+        }
+    };
+    var node_pid = process.pid;
+    var proc = exec('ps -eo ppid,pid,etimes,command | grep phantomjs', function(err, stdout, stderr) {
+        if(err !== null) {
+            console.log('ERROR FETCHING PHANTOM PROCS');
+            console.log(err);
+            return exec_cb(err);
+        }
+        else {
+            var memcheck_self = exec('ps -p ' + node_pid + ' -o %mem', function(e1, stdout1, stderr1) {
+               console.log('MEMCHECK SELF:');
+               var lines = stdout1.split(/\r?\n/g);
+               var percent_mem = parseFloat(lines[1]);
+               console.log('mfeddie is using ' + percent_mem + "% of the system's memory");
+               if(percent_mem > 4.1) {
+                   //murder suicide
+                   return exec('pkill phantomjs && kill -HUP ' + node_pid);
+               }
+
+            });
+            return exec_cb(stdout);
+        }
+    });
+
+
+
 }
 // Will iterate through the MF_Eddie instances and determine if an instance has exceeded its time limit.
 function start(self) {
@@ -112,7 +123,7 @@ function start(self) {
         var key_string = '';
         var tracked_pids = new Array();
         for (var key in self.instances) {
-			tracked_pids.push(parseInt(key));
+            tracked_pids.push(parseInt(key));
             var start_time = self.instances[key].time;
             var current_time = (new Date).getTime() / 1000;
             var diff = current_time - start_time;
