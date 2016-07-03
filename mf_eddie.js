@@ -84,7 +84,8 @@ function MF_Eddie(args, cb, mf_instances) {
         }
     } : false;
     if (this.settings.require_proxy) {
-        return phantom.create({
+        return phantom.create(
+            '--web-security=no', {
             onExit: exit_callback,
             parameters: {
                 proxy: this.settings.proxy
@@ -93,7 +94,7 @@ function MF_Eddie(args, cb, mf_instances) {
             return this.set_phantom(ph, phantom_cb);
         }.bind(this));
     } else {
-        return phantom.create({onExit:exit_callback}, function(ph) {
+        return phantom.create('--web-security=no', {onExit:exit_callback}, function(ph) {
             return this.set_phantom(ph, phantom_cb);
         }.bind(this));
     }
