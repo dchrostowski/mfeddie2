@@ -12,6 +12,10 @@ phantomjs-node - https://github.com/sgentle/phantomjs-node
 
 npm install phantom
 
+Disclaimer: mfeddie is a little buggy and the javascript could probably be written better.
+mfeddie leaks memory and kills itself when it utilizes x % of the system memory.  This will
+drop all mfeddie browsers and in-process requests.
+
 mf_server.js - Listens for web traffic with instructions included in either the request
 headers or query params.  This is where MFEddie browser instances are spawned, delegated,
 and killed (usually).
@@ -25,13 +29,15 @@ such as visit, wait, click, render, get_content.
 
 mf_instances.js - This is where mfeddie instances are stored.  mf_instances puts a time limit
 on how long an mfeddie instance may exist in memory.  This is necessary because mfeddie
-uses a lot of memory executing all the javascript out in the wild while browsing.  If
-an mfeddie browser stands idle for too long (default 2 minutes, I think...) mf_instances 
-will kill it.  ***DO NOT RELY ON MF_INSTANCES TO KILL YOUR MFEDDIE INSTANCES.  You should
-kill them manually by issuing a request to mf_server.js with browser id and kill commandl
+uses a lot of memory executing all the javascript out in the wild.  If
+an mfeddie browser stands idle for too long (default 2 minutes) mf_instances 
+will kill it.  You should not just let mf_instances kill your mfeddie browsers when 
+youre done with them.  You should kill your discarded browsers yourself by 
+setting mf-action to kill with the browser pid.   Being lazy and letting the browser 
+expire on its own is a waste of memory that could have otherwise been used for other requests.
 
-mf_instances is also responsbile for murder-suiciding the entire system when it starts
-eating up too much system memory.  This is a flaw in the MfEddie system that never got worked
-out.  When mf_instances pulls the trigger, all requests are dropped and crawlers waiting on
-responses will either timeout or throw errors.  mfeddie should then automatically respawn immediately
+mf_instances is also responsbile for killing the entire system when it starts
+eating up too much system memory. This is a bad workaround to a problem  This is a flaw in the MfEddie system that never got worked
+out.  When mf_instances terminates, all requests are dropped and crawlers waiting on
 kinda like Jesus, except mfeddie does it way faster than three days.
+responses will either timeout or throw errors.  mfeddie should then automatically respawn immediately
