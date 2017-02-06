@@ -22,19 +22,20 @@ and killed (usually).
 
 <h3>mf_eddie.js</h3>The MFEddie headless browser class.  Probably the most interesting class.
 This class is the prototype for headless browser objects which are spawned and killed
-by mf_server.js or mf_instances.js.  MFEddie is basically a faux web browser which 
-utilizes PhantomJS's functionality.  It is driven by web requests that come in through
+by mf_server.js or mf_instances.js.  mfeddie is basically a faux web browser which 
+utilizes PhantomJS.  It is driven by web requests that come in through
 mf_server.js.  mf_server.js will forward instructions and commands to the headless browser,
 such as visit, wait, click, render, get_content.
 
 <h3<mf_instances.js</h3>
 This is where mfeddie browser instances are stored.  mf_instances.js puts a time limit
-on how long an mfeddie instance may exist in memory.  This is necessary because mfeddie
-uses a lot of memory executing javascript out in the wild.  If
+on how long an mfeddie instance may site idle in memory.  This is necessary because mfeddie
+uses a lot of memory executing javascript.  If
 an mfeddie browser stands idle for too long (default 2 minutes) mf_instances 
 will kill it.  <b>You should not rely on letting mf_instances kill your mfeddie browsers when 
 youre done with them.  You should kill your discarded browsers yourself by 
-setting mf-action to kill with the browser pid.</b>   Being lazy and letting the browser 
+setting mf-action to kill or setting the mf-keep-alive option to 0 on your last request, 
+making sure to include mf-pid to identify the correct browser..</b> Being lazy and letting the browser 
 expire on its own is a waste of memory that could have otherwise been used for other requests.
 
 mf_instances is also responsbile for killing the entire system when it begins
@@ -45,15 +46,14 @@ responses will either timeout or throw errors.  Afterward, mfeddie should immedi
 respawn.
 
 
-<h2>Running</h2>
+<h2>How to use</h2>
 
 1. startup mfeddie:<br/>
 <i>node mf_server.js</i>
 
-2. Send instrunctions, spawn browsers, and scrape content:
+2. Send instrunctions, spawn browsers, and scrape content.
 
-<h2>Examples</h2>
-With cURL:
+<h2>Examples using cURL</h2>
 
 <h4>Visit page, dump headers to file</h4>
 dan@mail:~$ curl --dump-header resp_headers.txt localhost:8315 --header "mf-action: visit" --header "mf-url: http://google.com" --header "mf-keep-alive: 1" --header "mf-user-agent: Mozilla..." --header "mf-proxy: 46.29.155.79:80" 
