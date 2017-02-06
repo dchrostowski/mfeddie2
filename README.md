@@ -27,7 +27,7 @@ utilizes PhantomJS.  It is driven by web requests that come in through
 mf_server.js.  mf_server.js will forward instructions and commands to the headless browser,
 such as visit, wait, click, render, get_content.
 
-<h3<mf_instances.js</h3>
+<h3>mf_instances.js</h3>
 This is where mfeddie browser instances are stored.  mf_instances.js puts a time limit
 on how long an mfeddie instance may site idle in memory.  This is necessary because mfeddie
 uses a lot of memory executing javascript.  If
